@@ -6,11 +6,7 @@
     "build": "vite build",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist",
-    "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000",
-    "dev:d1": "wrangler pages dev dist --d1=manus-ai-db --local --ip 0.0.0.0 --port 3000",
-    "db:migrate:local": "wrangler d1 migrations apply manus-ai-db --local",
-    "db:migrate:prod": "wrangler d1 migrations apply manus-ai-db",
-    "db:reset": "rm -rf .wrangler/state/v3/d1"
+    "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000"
   },
   "dependencies": {
     "hono": "^4.12.9"
