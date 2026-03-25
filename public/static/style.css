@@ -324,6 +324,33 @@ html {
   border: none !important;
 }
 
+/* Toast notification */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.toast-item {
+  animation: toast-in 0.3s ease-out forwards;
+}
+
+/* Credits exhausted card */
+@keyframes credits-card-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.credits-exhausted-card {
+  animation: credits-card-in 0.4s ease-out forwards;
+}
+
+/* Settings modal */
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-in {
+  animation: modal-in 0.2s ease-out forwards;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   #sidebar {

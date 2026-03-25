@@ -1,34 +1,25 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "manus-ai-clone",
   "compatibility_date": "2026-03-23",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+
+  // D1 Database for persistent storage (conversations, credits, settings)
+  // Create production DB: npx wrangler d1 create manus-ai-db
+  // For local dev: use --d1=manus-ai-db --local flags
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "manus-ai-db",
+      "database_id": "placeholder-replace-with-real-id"
+    }
   ]
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
+
+  // Stripe/LemonSqueezy keys: set as secrets in production
+  // npx wrangler pages secret put STRIPE_SECRET_KEY --project-name manus-ai-clone
+  // npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name manus-ai-clone
+  // npx wrangler pages secret put LEMONSQUEEZY_API_KEY --project-name manus-ai-clone
 }
