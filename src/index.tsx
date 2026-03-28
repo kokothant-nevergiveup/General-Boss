@@ -694,6 +694,120 @@ app.get('/api/health', (c) => {
 })
 
 // ============================================================
+// DOCUMENTATION PAGE - Autonomous Agentic System
+// ============================================================
+app.get('/docs', (c) => {
+  const docsHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Agentic System - Documentation</title>
+    <meta name="description" content="Layer architecture, reports, process diagrams, and implementation plans for the Autonomous Agentic System">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>&#x1F4D1;</text></svg>">
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'inter': ['Inter', 'sans-serif'] }
+        }
+      }
+    }
+    </script>
+    <style>
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: #444; }
+      .nav-item { transition: all 0.15s ease; }
+      .nav-item:hover { background: #1e1e1e; }
+      .nav-item.active { background: #1a1a1a; color: #e8e8e8; border-left: 2px solid #c8a2ff; }
+      @keyframes spin-smooth { to { transform: rotate(360deg); } }
+      .agent-spinner { animation: spin-smooth 1s linear infinite; }
+    </style>
+</head>
+<body class="font-inter bg-[#0a0a0a] text-[#e8e8e8] h-screen overflow-hidden">
+    <div class="flex h-full">
+        <!-- Docs Sidebar -->
+        <aside class="w-[260px] bg-[#141414] border-r border-[#2a2a2a] flex flex-col h-full flex-shrink-0">
+            <div class="p-4 border-b border-[#2a2a2a]">
+                <a href="/" class="flex items-center gap-2.5 mb-3 hover:opacity-80 transition-opacity">
+                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+                        <i class="fas fa-robot text-white text-xs"></i>
+                    </div>
+                    <span class="text-sm font-semibold tracking-tight">manus</span>
+                </a>
+                <div class="text-xs text-gray-400 font-medium">AUTONOMOUS AGENTIC SYSTEM</div>
+                <div class="text-[10px] text-gray-600">Documentation & Reports</div>
+            </div>
+            <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
+                <div class="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Overview</div>
+                <button data-section="overview" onclick="navigateTo('overview')" class="nav-item active w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-home w-4 text-center"></i><span>System Overview</span>
+                </button>
+                
+                <div class="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-3">Layers</div>
+                <button data-section="layer1" onclick="navigateTo('layer1')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-shield-halved w-4 text-center text-red-400/60"></i><span>L1: Security</span>
+                </button>
+                <button data-section="layer2" onclick="navigateTo('layer2')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-database w-4 text-center text-blue-400/60"></i><span>L2: Persistence</span>
+                </button>
+                <button data-section="layer3" onclick="navigateTo('layer3')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-credit-card w-4 text-center text-green-400/60"></i><span>L3: Payments</span>
+                </button>
+                <button data-section="layer4" onclick="navigateTo('layer4')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-brain w-4 text-center text-purple-400/60"></i><span>L4: AI Engine</span>
+                </button>
+                <button data-section="layer5" onclick="navigateTo('layer5')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-desktop w-4 text-center text-cyan-400/60"></i><span>L5: Frontend</span>
+                </button>
+                <button data-section="layer6" onclick="navigateTo('layer6')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-cloud w-4 text-center text-amber-400/60"></i><span>L6: Deployment</span>
+                </button>
+                
+                <div class="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-3">Reports</div>
+                <button data-section="diagrams" onclick="navigateTo('diagrams')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-diagram-project w-4 text-center"></i><span>Process Diagrams</span>
+                </button>
+                <button data-section="implementation" onclick="navigateTo('implementation')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-list-check w-4 text-center"></i><span>Implementation Plan</span>
+                </button>
+                <button data-section="execution" onclick="navigateTo('execution')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-shield-halved w-4 text-center"></i><span>Execution Strategy</span>
+                </button>
+                <button data-section="status" onclick="navigateTo('status'); runHealthCheck()" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-heartbeat w-4 text-center"></i><span>Live Status</span>
+                </button>
+            </nav>
+            <div class="p-3 border-t border-[#2a2a2a]">
+                <a href="/" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:bg-[#1e1e1e] transition-colors">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                    <span>Back to App</span>
+                </a>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main id="docs-content" class="flex-1 overflow-y-auto">
+            <div id="docs-content-inner" class="max-w-4xl mx-auto px-6 py-8">
+                <!-- Content rendered by docs.js -->
+            </div>
+        </main>
+    </div>
+    
+    <script src="/static/docs.js"></script>
+</body>
+</html>`
+  return c.html(docsHtml)
+})
+
+// ============================================================
 // MAIN HTML (SPA shell)
 // ============================================================
 app.get('/', (c) => {

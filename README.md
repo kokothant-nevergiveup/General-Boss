@@ -4,6 +4,17 @@ A full-featured AI chat application that replicates the Manus AI interface with 
 
 ## Live Demo
 - **Sandbox**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai
+- **Documentation**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai/docs
+
+## Autonomous Agentic System Documentation
+
+The `/docs` route provides a comprehensive interactive documentation system including:
+- **6-Layer Architecture Overview** with visual diagrams
+- **Detailed Reports** for each layer (Security, Persistence, Payments, AI Engine, Frontend, Deployment)
+- **Process Diagrams** (request lifecycle, error handling matrix, data flow, ERD)
+- **Step-by-Step Implementation Plans** with phase tracking
+- **Risk-Free Incremental Execution Strategies** with rollback procedures
+- **Live System Status** with real-time health checks
 
 ## Architecture Overview
 
