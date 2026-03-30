@@ -1,90 +1,63 @@
-# Manus AI Clone
+# Manus AI - Autonomous Agentic System
 
-A full-featured AI chat application that replicates the Manus AI interface with dark-mode UI, streaming responses, Supabase persistence, and comprehensive backend services.
+An autonomous AI agent that evolves from chat assistant to task execution engine. Features a 6-layer architecture with dark-mode Manus-style UI, streaming AI responses, Supabase persistence, and multimodal output rendering.
 
 ## Live Demo
-- **Sandbox**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai
+- **App**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai
 - **Documentation**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai/docs
 
-## Autonomous Agentic System Documentation
+## Phase 4: Agentic Execution System (Current)
 
-The `/docs` route provides a comprehensive interactive documentation system including:
-- **6-Layer Architecture Overview** with visual diagrams
-- **Detailed Reports** for each layer (Security, Persistence, Payments, AI Engine, Frontend, Deployment)
-- **Process Diagrams** (request lifecycle, error handling matrix, data flow, ERD)
-- **Step-by-Step Implementation Plans** with phase tracking
-- **Risk-Free Incremental Execution Strategies** with rollback procedures
-- **Live System Status** with real-time health checks
+### What's New
+Phase 4 transforms the chat-based assistant into an **Agentic Execution System** with:
 
-## Architecture Overview
+1. **Agentic Planning (L4)** - Task decomposition engine, real-time "Thinking Process" UI panel, Agent Mode toggle for deep execution tasks
+2. **Multimodal Output Rendering (L5)** - Slides Generator (Markdown-to-slide with 16:9 preview), Web Designer (HTML preview with sandbox iframe + device toggle)
+3. **Asynchronous Task Tracking (L2 & L3)** - In-memory task state tracking (Pending/Executing/Success/Failed), notification system with bell + panel
+4. **Manus-Style UI/UX** - Landing page greeting "What can I do for you?", 4 quick-action cards + 4 secondary pills, dark-mode aesthetic, mobile responsiveness
 
-### 4 Core Systems Implemented
+### Phase 4 Features Completed
+- Landing page with animated robot icon and gradient heading
+- Quick-action cards: [Create Slides], [Build Website], [Automate Apps], [Design Concepts]
+- Secondary actions: Research, Data Analysis, Writing, Marketing
+- Agent Mode toggle in sidebar with glow effects and header badge
+- Task decomposition for 5 categories (presentations, websites, automation, design, general)
+- Thinking Process UI panel with animated step progression and status badges
+- Slides Generator: detect `## Slide N:` patterns, parse and render, full-screen preview modal with keyboard nav (Left/Right arrows)
+- Web Designer Preview: detect HTML code blocks, miniature preview card, full-screen sandboxed iframe with desktop/mobile toggle
+- Notification system: bell icon with unread badge, slide-out panel, categorized alerts (info/success/warning/error)
+- Settings > Tasks tab for agent task tracking with status badges
+- Agent execution panel with distinct gradient background and pulse-glow animations
+- Documentation (/docs) updated with Phase 4 section and "Agentic Execution" nav item
 
-#### 1. Security & API Protection
-- **API keys NEVER exposed to frontend** - all external calls (OpenAI, Stripe, LemonSqueezy, Supabase) go through server-side proxy routes in Hono
-- **Environment variable management**: `.dev.vars` for local dev, Cloudflare Secrets for production (`wrangler secret put`)
-- **Rate limiting**: In-memory per-IP rate limiting (30 req/60s window)
-- **Input sanitization**: All user inputs sanitized and length-limited
-- **CORS**: Configured for API routes only with proper headers
+## 6-Layer Architecture
 
-#### 2. Persistence (Supabase PostgreSQL)
-- **Supabase** as the primary persistent storage (replaces Cloudflare D1)
-- **Tables**: `profiles` (credits, settings, plan), `conversations`, `messages`, `usage_history`
-- **Database-first approach**: All data is fetched from Supabase on app load - NO localStorage for data
-- **Cross-device sync**: Users can access their chats from ANY device with the same userId
-- **Graceful fallback**: If Supabase is unreachable, app runs in offline mode
-- **Server-side only**: Supabase service key stored as env var, never exposed to client
-- **PostgREST API**: All DB operations go through Supabase REST API (no SDK dependency)
+| Layer | Name | Status | Key Components |
+|-------|------|--------|----------------|
+| L1 | Security & API Protection | 95% | Rate limiting, CORS, sanitization, env secrets |
+| L2 | Data Persistence (Supabase) | 80% | PostgreSQL via PostgREST, task state tracking |
+| L3 | Credit & Payment System | 80% | Stripe + LemonSqueezy, demo mode, per-model costs |
+| L4 | AI Processing & Agentic Planning | 90% | Task decomposition, fallback chain, streaming SSE |
+| L5 | Frontend & Multimodal Output | 90% | Slides, Web Preview, Notifications, Manus UI |
+| L6 | Edge Deployment & DevOps | 70% | Cloudflare Pages, PM2, Wrangler CLI |
 
-#### 3. Real-World Credit System (Stripe + LemonSqueezy)
-- **Stripe primary, LemonSqueezy fallback** - dual payment provider support
-- **Server-side checkout session creation** - no payment keys on client
-- **Webhook handlers** for both providers
-- **Demo mode**: Auto-activates when no payment keys configured
-- **Credit costs**: Standard=15, Pro=45, Lite=8 per message
-- **Plans**: Starter ($9.99 / 5,000 credits), Pro ($29.99 / 20,000 credits)
+## Interactive Documentation
 
-#### 4. Edge Cases & Error Handling
-- **Model fallback chain**: Requested model -> gpt-5-mini -> gpt-5-nano -> local offline fallback
-- **Offline intelligence**: Smart response generator for when all API calls fail
-- **Custom error UI**: Distinct error cards for credits exhausted, rate limited, API down, generic errors
-- **API error overlay**: Full-screen warning after 3+ consecutive API failures
-- **Retry buttons**: One-click retry on all error messages
-
-## Supabase Setup
-
-### 1. Create Tables
-Run the SQL in `supabase/schema.sql` in your Supabase SQL Editor:
-
-```sql
--- Tables created:
--- profiles: user credits, settings, plan (linked by user_id)
--- conversations: chat sessions (linked to profiles via user_id)
--- messages: individual messages (linked to conversations)
--- usage_history: credit usage tracking (linked to profiles)
-```
-
-### 2. Get Credentials
-From your Supabase Dashboard -> Project Settings -> API:
-- **Project URL** (`SUPABASE_URL`): `https://your-project.supabase.co`
-- **Service Role Key** (`SUPABASE_SERVICE_KEY`): `eyJ...` (the `service_role` key, NOT `anon`)
-
-### 3. Configure Environment
-```bash
-# .dev.vars (local development)
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...your-service-role-key
-
-# Production (Cloudflare Secrets)
-npx wrangler pages secret put SUPABASE_URL --project-name manus-ai-clone
-npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai-clone
-```
+The `/docs` route provides comprehensive documentation including:
+- **System Overview** with architecture diagram and Phase 4 highlight
+- **6 Layer Detail Pages** with process flows, component reports, implementation plans, risk assessments
+- **Phase 4: Agentic Execution** dedicated section with system vision, upgrade areas, and execution flow
+- **Process Diagrams** (request lifecycle, error handling matrix, file structure)
+- **Implementation Plan** with Phases 1-5 tracking
+- **Execution Strategy** with safety principles and rollback procedures
+- **Live Status** with real-time health checks and Phase 4 feature checklist
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | Main SPA shell |
+| GET | `/` | Main SPA (landing page + chat) |
+| GET | `/docs` | Interactive documentation |
 | GET | `/api/health` | Service health check (AI, Supabase, Stripe, LS) |
 | GET | `/api/models` | Available AI models with credit costs |
 | POST | `/api/chat` | AI chat proxy with streaming (SSE) |
@@ -95,7 +68,7 @@ npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai-clone
 | POST | `/api/db/conversations` | Save conversations to Supabase |
 | GET | `/api/db/conversations/:userId` | Load conversations from Supabase |
 | DELETE | `/api/db/conversations/:convId` | Delete conversation |
-| GET | `/api/db/profile/:userId` | Load user profile (credits, settings, history) |
+| GET | `/api/db/profile/:userId` | Load user profile |
 | POST | `/api/db/profile` | Update user profile |
 | GET | `/api/db/credits/:userId` | Load credits (backward compat) |
 | POST | `/api/db/credits` | Update credits (backward compat) |
@@ -107,51 +80,60 @@ npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai-clone
 ### Supabase Tables
 
 ```
-profiles
-  id TEXT PK          -- user_id
-  email TEXT
-  name TEXT
-  plan TEXT            -- 'free', 'starter', 'pro'
-  credits INTEGER      -- current credit balance
-  total_credits INTEGER -- lifetime credits earned
-  settings JSONB       -- user preferences
-  created_at, updated_at
-
-conversations
-  id TEXT PK           -- conversation_id
-  user_id TEXT FK -> profiles.id
-  title TEXT
-  created_at, updated_at
-
-messages
-  id BIGSERIAL PK
-  conversation_id TEXT FK -> conversations.id (CASCADE DELETE)
-  role TEXT             -- 'user', 'assistant', 'system'
-  content TEXT
-  model TEXT
-  created_at
-
-usage_history
-  id BIGSERIAL PK
-  user_id TEXT FK -> profiles.id
-  detail TEXT
-  change_amount INTEGER
-  type TEXT             -- 'usage', 'bonus', 'purchase', 'refund'
-  created_at
+profiles           - User credits, settings, plan
+conversations      - Chat sessions (user_id FK)
+messages           - Individual messages (conversation_id FK, CASCADE DELETE)
+usage_history      - Credit usage tracking (user_id FK)
 ```
+
+### Credit Cost Matrix
+
+| Model | Display Name | Cost/Message |
+|-------|-------------|--------------|
+| gpt-5-mini | Manus Standard | 15 credits |
+| gpt-5 | Manus Pro | 45 credits |
+| gpt-5-nano | Manus Lite | 8 credits |
+
+### Plans
+- **Free**: 1,000 credits
+- **Starter**: $9.99 / 5,000 credits
+- **Pro**: $29.99 / 20,000 credits
 
 ## Tech Stack
 - **Backend**: Hono (TypeScript, Edge-first)
-- **Frontend**: Vanilla JS, Tailwind CSS, FontAwesome, Highlight.js, Marked.js
+- **Frontend**: Vanilla JS, Tailwind CSS (CDN), FontAwesome, Highlight.js, Marked.js
 - **Database**: Supabase PostgreSQL (via PostgREST API)
 - **AI**: OpenAI-compatible API (proxied server-side)
 - **Payments**: Stripe + LemonSqueezy (server-side only)
 - **Deployment**: Cloudflare Pages + Workers
 
+## Project Structure
+
+```
+webapp/
+├── src/
+│   └── index.tsx              # Hono backend + HTML shell (~1300 lines)
+│                                # Landing page, Agent Mode, modals, settings
+├── public/static/
+│   ├── app.js                 # Frontend JS (~1310 lines)
+│   │                            # Agent Mode, task decomposition, slides,
+│   │                            # web preview, notifications, persistence
+│   ├── style.css              # Custom CSS (~390 lines)
+│   │                            # Agent effects, multimodal styles, responsive
+│   └── docs.js                # Interactive documentation system
+├── supabase/
+│   └── schema.sql             # Database schema
+├── .dev.vars                  # Local environment variables
+├── ecosystem.config.cjs       # PM2 configuration
+├── wrangler.jsonc             # Cloudflare configuration
+├── package.json               # Dependencies
+└── README.md                  # This file
+```
+
 ## Environment Variables
 
 ```bash
-# Required
+# Required for AI
 OPENAI_API_KEY=your-key
 OPENAI_BASE_URL=https://api.openai.com/v1
 
@@ -172,72 +154,52 @@ LEMONSQUEEZY_STORE_ID=...
 ```
 
 ## Local Development
+
 ```bash
 npm install
 npm run build
-npm run dev:sandbox  # Start with wrangler pages dev
+pm2 start ecosystem.config.cjs   # Start with PM2 on port 3000
 
-# Or with PM2 (sandbox):
-pm2 start ecosystem.config.cjs
+# Or without PM2:
+npm run dev:sandbox
 ```
 
-## Production Deployment
+## User Guide
+
+1. **Landing Page**: Choose a quick action or type your own task
+2. **Agent Mode**: Toggle in sidebar for autonomous task execution with step-by-step thinking
+3. **Chat**: Type messages, get streaming AI responses with markdown rendering
+4. **Slides**: Ask to "create a presentation" - slides are auto-detected and rendered with preview modal
+5. **Web Preview**: Ask to "build a website" - HTML code blocks render as live previews
+6. **Notifications**: Bell icon shows task completion alerts
+7. **Settings**: Manage account, view usage, upgrade plan, track tasks
+8. **Keyboard**: Ctrl+K (new chat), Escape (close modals), Left/Right (slide nav)
+
+## Deployment
+
 ```bash
-# 1. Set up Supabase (run supabase/schema.sql in SQL Editor)
+# Production deployment to Cloudflare Pages
+npm run build
+npx wrangler pages deploy dist --project-name manus-ai
 
-# 2. Set secrets
-npx wrangler pages secret put OPENAI_API_KEY --project-name manus-ai-clone
-npx wrangler pages secret put SUPABASE_URL --project-name manus-ai-clone
-npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai-clone
-
-# 3. Deploy
-npm run deploy
+# Set production secrets
+npx wrangler pages secret put OPENAI_API_KEY --project-name manus-ai
+npx wrangler pages secret put SUPABASE_URL --project-name manus-ai
+npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai
 ```
 
-## Features
-- Dark-mode Manus-style UI
-- AI chat with streaming responses
-- **Supabase PostgreSQL persistence** (cross-device sync)
-- Thinking animation with execution steps
-- Sidebar conversation history (grouped by date)
-- Model selector (Standard/Pro/Lite) with credit costs
-- Settings modal (Account, Usage, Billing, General tabs)
-- Payment integration (Stripe/LemonSqueezy or demo mode)
-- Credits system with progress bar and usage history
-- Quick-action cards (slides, website, apps, design)
-- Markdown rendering with syntax highlighting and code copy
-- Responsive mobile design
-- Keyboard shortcuts (Ctrl+K, Escape)
-- Toast notification system
-- Error handling with retry buttons
-- Auto-fallback to Lite model on API failure
+## What's Next (Pending)
 
-## Project Structure
-```
-webapp/
-├── src/
-│   └── index.tsx          # Hono backend + HTML shell
-├── public/static/
-│   ├── app.js             # Frontend JavaScript
-│   └── style.css          # Custom CSS
-├── supabase/
-│   └── schema.sql         # Database schema (run in Supabase SQL Editor)
-├── .dev.vars              # Local environment variables
-├── ecosystem.config.cjs   # PM2 configuration
-├── wrangler.jsonc         # Cloudflare configuration
-├── package.json           # Dependencies
-└── README.md              # This file
-```
+- [ ] Supabase `task_executions` table for persistent task tracking across sessions
+- [ ] Background execution that survives browser close (server-side task queue)
+- [ ] File-to-Web transform (upload file -> interactive landing page)
+- [ ] Real Supabase credentials and Row Level Security
+- [ ] Stripe/LemonSqueezy production keys and webhook signature verification
+- [ ] Cloudflare Pages production deployment
+- [ ] Server-side credit verification
+- [ ] Accessibility (ARIA labels, focus management)
 
-## Migration from D1 to Supabase
-
-This project was migrated from Cloudflare D1 to Supabase PostgreSQL:
-
-| Before (D1) | After (Supabase) |
-|---|---|
-| localStorage + optional D1 sync | Supabase-first, no localStorage for data |
-| Manual sync toggle in settings | Always synced (automatic) |
-| Browser-only without sync | Cross-device access by default |
-| D1 SQLite (Cloudflare-only) | Supabase PostgreSQL (any provider) |
-| `DB: D1Database` binding | `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` env vars |
-| 6 separate tables | 4 optimized tables (`profiles` merges users+credits+settings) |
+## Status
+- **Platform**: Cloudflare Pages (dev sandbox)
+- **Phase**: 4 - Agentic Execution System
+- **Last Updated**: 2026-03-30
