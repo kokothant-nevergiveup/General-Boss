@@ -62,19 +62,64 @@ function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toast-container');
   if (!container) return;
   const toast = document.createElement('div');
-  const colors = {
-    info: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-    success: 'border-green-500/30 bg-green-500/10 text-green-300',
-    warning: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-    error: 'border-red-500/30 bg-red-500/10 text-red-300'
+  const icons = {
+    info: 'fa-sparkles',
+    success: 'fa-circle-check',
+    warning: 'fa-triangle-exclamation',
+    error: 'fa-circle-xmark'
   };
-  const icons = { info: 'fa-circle-info', success: 'fa-circle-check', warning: 'fa-triangle-exclamation', error: 'fa-circle-xmark' };
-  toast.className = `toast-item flex items-center gap-3 px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-xl shadow-lg min-w-[300px] max-w-[420px]`;
-  toast.innerHTML = `<i class="fas ${icons[type]} text-sm flex-shrink-0"></i>
-    <span class="text-sm flex-1">${escapeHtml(message)}</span>
-    <button onclick="this.parentElement.remove()" class="p-1 hover:opacity-70 transition-opacity flex-shrink-0"><i class="fas fa-xmark text-xs"></i></button>`;
+  const toastType = ['info', 'success', 'warning', 'error'].includes(type) ? type : 'info';
+  toast.className = `toast-item toast-${toastType}`;
+  toast.innerHTML = `<div class="toast-icon-wrap"><i class="fas ${icons[toastType]} text-sm"></i></div>
+    <div class="toast-copy"><div class="toast-label">${toastType === 'success' ? 'Completed' : toastType === 'warning' ? 'Heads up' : toastType === 'error' ? 'Issue detected' : 'General Boss'}</div><div class="toast-message">${escapeHtml(message)}</div></div>
+    <button onclick="this.parentElement.remove()" class="toast-close-btn" aria-label="Dismiss notification"><i class="fas fa-xmark text-xs"></i></button>`;
   container.appendChild(toast);
   setTimeout(() => { if (toast.parentElement) toast.remove(); }, duration);
+}
+
+function updateAgentModeHint() {
+  const hintText = document.querySelector('#landing-page .mt-8 span');
+  if (!hintText) return;
+  hintText.innerHTML = agentModeEnabled
+    ? 'Agent Mode is <span class="text-manus-accent">active</span> for deep autonomous execution'
+    : 'Enable <button onclick="document.getElementById(\'agent-mode-toggle\').click()" class="text-manus-accent hover:underline">Agent Mode</button> for deep autonomous execution';
+}
+
+function updateThinkingProgress(current, total) {
+  const fill = document.getElementById('thinking-progress-fill');
+  const meta = document.getElementById('thinking-progress-meta');
+  const safeTotal = Math.max(total || 1, 1);
+  const clampedCurrent = Math.min(Math.max(current || 0, 0), safeTotal);
+  if (fill) fill.style.width = `${Math.max((clampedCurrent / safeTotal) * 100, 8)}%`;
+  if (meta) meta.textContent = `${clampedCurrent}/${safeTotal}`;
+}
+
+function setThinkingIndicatorState(state, statusText = '') {
+  const indicator = document.getElementById('thinking-indicator');
+  if (!indicator) return;
+  indicator.dataset.phase = state;
+  const status = document.getElementById('thinking-status');
+  if (statusText && status) status.textContent = statusText;
+}
+
+function finalizeThinkingIndicator() {
+  const indicator = document.getElementById('thinking-indicator');
+  if (!indicator) return;
+  indicator.classList.add('is-complete');
+  setThinkingIndicatorState('complete', agentModeEnabled ? 'Task plan completed' : 'Execution trace completed');
+}
+
+function updateAgentModeUI() {
+  const badge = document.getElementById('agent-badge');
+  const body = document.body;
+  if (agentModeEnabled) {
+    if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex'); }
+    body.classList.add('agent-mode-active');
+  } else {
+    if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
+    body.classList.remove('agent-mode-active');
+  }
+  updateAgentModeHint();
 }
 
 // ============================================================
@@ -85,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupInputListener();
   checkPaymentReturn();
   updateAccountInfo();
+  updateAgentModeUI();
   await initializeFromDatabase();
   checkPaymentAvailability();
 
@@ -123,16 +169,8 @@ function updateAccountInfo() {
 // ============================================================
 function toggleAgentMode(enabled) {
   agentModeEnabled = enabled;
-  const badge = document.getElementById('agent-badge');
-  const body = document.body;
-  if (enabled) {
-    if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex'); }
-    body.classList.add('agent-mode-active');
-    showToast('Agent Mode enabled. Tasks will be decomposed and executed autonomously.', 'info', 3000);
-  } else {
-    if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
-    body.classList.remove('agent-mode-active');
-  }
+  updateAgentModeUI();
+  if (enabled) showToast('Agent Mode enabled. Tasks will be decomposed and executed autonomously.', 'info', 3000);
 }
 
 function decomposeTask(userMessage) {
@@ -239,12 +277,12 @@ function renderNotifications() {
     const icons = { info: 'fa-circle-info text-blue-400', success: 'fa-circle-check text-green-400', warning: 'fa-triangle-exclamation text-amber-400', error: 'fa-circle-xmark text-red-400' };
     const timeAgo = getTimeAgo(n.createdAt);
     return `<div class="notif-item ${n.read ? '' : 'unread'}">
-      <div class="flex items-start gap-2.5">
-        <i class="fas ${icons[n.type] || icons.info} text-sm mt-0.5"></i>
+      <div class="flex items-start gap-3">
+        <div class="notif-icon-wrap"><i class="fas ${icons[n.type] || icons.info} text-sm mt-0.5"></i></div>
         <div class="flex-1 min-w-0">
-          <div class="text-xs font-medium">${escapeHtml(n.title)}</div>
-          <div class="text-[11px] text-manus-text-dim mt-0.5">${escapeHtml(n.body)}</div>
-          <div class="text-[10px] text-manus-text-dim mt-1">${timeAgo}</div>
+          <div class="text-xs font-medium text-manus-text">${escapeHtml(n.title)}</div>
+          <div class="text-[11px] text-manus-text-muted mt-1 leading-5">${escapeHtml(n.body)}</div>
+          <div class="text-[10px] text-manus-text-dim mt-2">${timeAgo}</div>
         </div>
       </div>
     </div>`;
@@ -673,10 +711,12 @@ function renderThinkingIndicator(taskSteps) {
   if (!area) return null;
   const div = document.createElement('div');
   div.id = 'thinking-indicator';
-  div.className = 'mb-6 message-bubble';
+  div.className = 'mb-6 message-bubble thinking-indicator-wrap';
 
   const isAgent = agentModeEnabled && taskSteps && taskSteps.length > 0;
   const panelClass = isAgent ? 'agent-execution-panel' : 'execution-panel';
+  const totalSteps = isAgent ? taskSteps.length : 4;
+  const initialProgress = isAgent ? 1 : 1;
 
   let stepsHtml = '';
   if (isAgent && taskSteps) {
@@ -684,7 +724,7 @@ function renderThinkingIndicator(taskSteps) {
       ${taskSteps.map((s, i) => `<div class="task-checklist-item ${i === 0 ? 'active' : ''}" data-step="${s.id}">
         <div class="task-check">${i === 0 ? '<i class="fas fa-spinner fa-spin text-[8px]"></i>' : '<span class="text-[8px]">${s.id}</span>'}</div>
         <span class="text-manus-text-muted flex-1">${s.text}</span>
-        <span class="task-status pending text-[10px]">${i === 0 ? 'Running' : 'Pending'}</span>
+        <span class="task-status ${i === 0 ? 'executing' : 'pending'} text-[10px]">${i === 0 ? 'Running' : 'Pending'}</span>
       </div>`).join('')}
     </div>`;
   } else {
@@ -700,13 +740,24 @@ function renderThinkingIndicator(taskSteps) {
       <div class="text-xs text-manus-text-dim mb-1.5 font-medium">Manus ${isAgent ? '<span class="text-manus-accent ml-1">Agent</span>' : ''}</div>
       <div class="${panelClass}">
         <div class="execution-header">
-          <div class="agent-spinner w-4 h-4 border-2 border-manus-accent/30 border-t-manus-accent rounded-full"></div>
-          <span class="text-xs font-medium text-manus-text-muted" id="thinking-status">${isAgent ? 'Executing task plan...' : 'Working on your task...'}</span>
+          <div class="execution-header-main">
+            <div class="execution-label-row">
+              <span class="thinking-kicker">${isAgent ? 'Thinking Process' : 'Execution Trace'}</span>
+              <span class="thinking-progress-meta" id="thinking-progress-meta">${initialProgress}/${totalSteps}</span>
+            </div>
+            <div class="execution-status-row">
+              <div class="agent-spinner w-4 h-4 border-2 border-manus-accent/30 border-t-manus-accent rounded-full"></div>
+              <span class="text-xs font-medium text-manus-text-muted" id="thinking-status">${isAgent ? 'Executing task plan...' : 'Working on your task...'}</span>
+            </div>
+          </div>
         </div>
+        <div class="thinking-progress-track"><div class="thinking-progress-fill" id="thinking-progress-fill" style="width:${Math.max((initialProgress / totalSteps) * 100, 8)}%"></div></div>
         ${stepsHtml}
       </div>
     </div></div>`;
   area.appendChild(div);
+  div.dataset.phase = 'executing';
+  div.dataset.totalSteps = totalSteps;
   scrollToBottom();
   return div;
 }
@@ -731,6 +782,7 @@ function advanceAgentStep(stepId) {
       status.className = 'task-status executing text-[10px]';
     }
   });
+  updateThinkingProgress(stepId, items.length);
   scrollToBottom();
 }
 
@@ -745,8 +797,8 @@ function completeAllAgentSteps() {
     status.textContent = 'Done';
     status.className = 'task-status success text-[10px]';
   });
-  const thinkingStatus = document.getElementById('thinking-status');
-  if (thinkingStatus) thinkingStatus.textContent = 'All steps completed!';
+  updateThinkingProgress(checklist.querySelectorAll('.task-checklist-item').length, checklist.querySelectorAll('.task-checklist-item').length);
+  setThinkingIndicatorState('responding', 'All steps completed. Drafting final response...');
 }
 
 function addExecutionStep(text, status = 'active') {
@@ -762,6 +814,7 @@ function addExecutionStep(text, status = 'active') {
   const iconContent = status === 'completed' ? '<i class="fas fa-check text-[8px]"></i>' : '<i class="fas fa-circle text-[6px]"></i>';
   step.innerHTML = `<div class="step-icon ${iconClass}">${iconContent}</div><span class="text-manus-text-muted">${text}</span>`;
   steps.appendChild(step);
+  updateThinkingProgress(steps.children.length, parseInt(document.getElementById('thinking-indicator')?.dataset.totalSteps || '4', 10));
   steps.scrollTop = steps.scrollHeight;
 }
 
@@ -1089,10 +1142,9 @@ async function sendMessage() {
       const badge = document.getElementById('fallback-badge');
       if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex'); }
       if (modelUsed === 'local-fallback') {
-        document.getElementById('fallback-badge-text').textContent = 'Offline mode';
-        const status = document.getElementById('thinking-status');
-        if (status) status.textContent = 'Using offline intelligence...';
-        showToast('AI service unavailable. Using offline mode.', 'warning');
+        document.getElementById('fallback-badge-text').textContent = 'Local AI';
+        setThinkingIndicatorState('fallback', 'Primary AI unavailable. Continuing with local intelligence...');
+        showToast('Primary AI unavailable. Continuing with local intelligence.', 'warning');
         if (consecutiveAPIFailures >= MAX_API_FAILURES_BEFORE_WARNING) document.getElementById('api-error-overlay').classList.remove('hidden');
       } else {
         document.getElementById('fallback-badge-text').textContent = `Switched to ${modelUsed === 'gpt-5-nano' ? 'Lite' : modelUsed}`;
@@ -1105,10 +1157,12 @@ async function sendMessage() {
     }
 
     if (agentModeEnabled && taskSteps) completeAllAgentSteps();
-    else addExecutionStep('Task completed', 'completed');
+    else {
+      addExecutionStep('Drafting final response...', 'completed');
+      setThinkingIndicatorState('responding', 'Drafting final response...');
+    }
 
-    await sleep(500);
-    removeThinkingIndicator();
+    await sleep(320);
     renderStreamingMessage();
 
     const reader = response.body.getReader();
@@ -1125,6 +1179,7 @@ async function sendMessage() {
     }
 
     finalizeStreamingMessage(fullContent);
+    finalizeThinkingIndicator();
     currentMessages.push({ role: 'assistant', content: fullContent });
     if (conv) { conv.messages = [...currentMessages]; conv.updatedAt = new Date().toISOString(); saveConversations(); }
     deductCredits(modelUsed === 'local-fallback' ? 'gpt-5-nano' : modelUsed, text);
@@ -1243,7 +1298,7 @@ function renderTasksList() {
     const statusIcons = { pending: 'fa-clock', executing: 'fa-spinner fa-spin', success: 'fa-check-circle', failed: 'fa-times-circle' };
     const sc = statusColors[task.status] || statusColors.pending;
     const si = statusIcons[task.status] || statusIcons.pending;
-    return `<div class="p-4 bg-manus-surface2 rounded-xl border border-manus-border">
+    return `<div class="task-log-card p-4 bg-manus-surface2 rounded-xl border border-manus-border">
       <div class="flex items-start justify-between gap-3 mb-2">
         <div class="text-sm font-medium flex-1">${escapeHtml(task.title)}</div>
         <span class="task-status ${task.status} flex-shrink-0"><i class="fas ${si} text-[9px] mr-1"></i>${task.status.charAt(0).toUpperCase() + task.status.slice(1)}</span>
