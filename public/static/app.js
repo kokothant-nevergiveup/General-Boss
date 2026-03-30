@@ -1,16 +1,16 @@
 // ============================================================
-// Manus AI Clone - Production Frontend (Supabase Persistence)
+// Manus AI - Phase 4: Agentic Execution System Frontend
 // ============================================================
-// 1. Security: API keys NEVER touch this file. All external API
-//    calls go through server-side /api/* proxy routes.
-// 2. Persistence: Supabase PostgreSQL (primary) - NO localStorage
-//    All data fetched from and saved to the server on every action.
-//    Users can access their chats from ANY device.
-// 3. Credits: Stripe/LemonSqueezy payment + real credit deduction
-// 4. Error Handling: Fallback model + custom error UI + offline mode
+// Architecture:
+// 1. Security: API keys NEVER in this file. All via /api/* proxy.
+// 2. Persistence: Supabase PostgreSQL (primary) via server routes.
+// 3. Credits: Stripe/LemonSqueezy + real credit deduction.
+// 4. Agent Mode: Task decomposition, Thinking Process UI.
+// 5. Multimodal: Slides Generator, Web Designer Preview.
+// 6. Notifications: Task completion alerts.
 // ============================================================
 
-// --- State (all loaded from Supabase, not localStorage) ---
+// --- State ---
 let conversations = [];
 let currentConversationId = null;
 let currentMessages = [];
@@ -22,10 +22,22 @@ let usageHistory = [];
 let userId = localStorage.getItem('manus_user_id') || generateUserId();
 let dbAvailable = false;
 let consecutiveAPIFailures = 0;
-let dataLoaded = false; // track if initial load from DB is done
+let dataLoaded = false;
 const MAX_API_FAILURES_BEFORE_WARNING = 3;
 
-// Credit cost per model (must match server)
+// Agent Mode state
+let agentModeEnabled = false;
+let agentTasks = []; // { id, title, status, steps, createdAt }
+let notifications = [];
+
+// Slides state
+let currentSlides = [];
+let currentSlideIndex = 0;
+
+// Web Preview state
+let currentWebCode = '';
+
+// Credit cost per model
 const MODEL_COSTS = { 'gpt-5-mini': 15, 'gpt-5': 45, 'gpt-5-nano': 8 };
 
 function generateUserId() {
@@ -34,14 +46,13 @@ function generateUserId() {
   return id;
 }
 
-// Configure marked (markdown renderer)
+// Configure marked
 marked.setOptions({
   highlight: function(code, lang) {
     if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
     return hljs.highlightAuto(code).value;
   },
-  breaks: true,
-  gfm: true
+  breaks: true, gfm: true
 });
 
 // ============================================================
@@ -59,8 +70,7 @@ function showToast(message, type = 'info', duration = 4000) {
   };
   const icons = { info: 'fa-circle-info', success: 'fa-circle-check', warning: 'fa-triangle-exclamation', error: 'fa-circle-xmark' };
   toast.className = `toast-item flex items-center gap-3 px-4 py-3 rounded-xl border ${colors[type]} backdrop-blur-xl shadow-lg min-w-[300px] max-w-[420px]`;
-  toast.innerHTML = `
-    <i class="fas ${icons[type]} text-sm flex-shrink-0"></i>
+  toast.innerHTML = `<i class="fas ${icons[type]} text-sm flex-shrink-0"></i>
     <span class="text-sm flex-1">${escapeHtml(message)}</span>
     <button onclick="this.parentElement.remove()" class="p-1 hover:opacity-70 transition-opacity flex-shrink-0"><i class="fas fa-xmark text-xs"></i></button>`;
   container.appendChild(toast);
@@ -75,11 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupInputListener();
   checkPaymentReturn();
   updateAccountInfo();
-
-  // Check Supabase availability & load all data
   await initializeFromDatabase();
-
-  // Check payment service availability
   checkPaymentAvailability();
 
   // Close dropdowns on outside click
@@ -87,6 +93,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modelSelector = document.getElementById('model-selector');
     if (modelSelector && !modelSelector.contains(e.target)) {
       document.getElementById('model-dropdown').classList.add('hidden');
+    }
+    const notifPanel = document.getElementById('notification-panel');
+    const notifBell = document.getElementById('notification-bell');
+    if (notifPanel && !notifPanel.contains(e.target) && notifBell && !notifBell.contains(e.target)) {
+      notifPanel.classList.add('hidden');
     }
   });
 });
@@ -108,25 +119,156 @@ function updateAccountInfo() {
 }
 
 // ============================================================
-// 2. PERSISTENCE - Supabase PostgreSQL (Primary)
+// AGENT MODE
 // ============================================================
-// Strategy:
-// - ALL data is fetched from Supabase on app load
-// - ALL mutations (save, delete, update) go to Supabase via /api/db/*
-// - No localStorage for conversations/credits/settings
-// - Only localStorage stores userId (device identifier)
-// - Users can access chats from ANY device with the same userId
-// ============================================================
+function toggleAgentMode(enabled) {
+  agentModeEnabled = enabled;
+  const badge = document.getElementById('agent-badge');
+  const body = document.body;
+  if (enabled) {
+    if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex'); }
+    body.classList.add('agent-mode-active');
+    showToast('Agent Mode enabled. Tasks will be decomposed and executed autonomously.', 'info', 3000);
+  } else {
+    if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
+    body.classList.remove('agent-mode-active');
+  }
+}
 
+function decomposeTask(userMessage) {
+  const msg = userMessage.toLowerCase();
+  const steps = [];
+
+  if (msg.includes('slide') || msg.includes('presentation') || msg.includes('deck')) {
+    steps.push(
+      { id: 1, text: 'Analyzing presentation requirements', status: 'pending' },
+      { id: 2, text: 'Researching topic and key points', status: 'pending' },
+      { id: 3, text: 'Creating slide structure and outline', status: 'pending' },
+      { id: 4, text: 'Generating slide content', status: 'pending' },
+      { id: 5, text: 'Applying design and formatting', status: 'pending' },
+      { id: 6, text: 'Rendering interactive preview', status: 'pending' }
+    );
+  } else if (msg.includes('website') || msg.includes('landing') || msg.includes('web app') || msg.includes('web page')) {
+    steps.push(
+      { id: 1, text: 'Analyzing website requirements', status: 'pending' },
+      { id: 2, text: 'Designing layout and component structure', status: 'pending' },
+      { id: 3, text: 'Building HTML structure', status: 'pending' },
+      { id: 4, text: 'Styling with Tailwind CSS', status: 'pending' },
+      { id: 5, text: 'Adding interactive JavaScript', status: 'pending' },
+      { id: 6, text: 'Rendering live preview', status: 'pending' }
+    );
+  } else if (msg.includes('automat') || msg.includes('workflow') || msg.includes('script')) {
+    steps.push(
+      { id: 1, text: 'Understanding automation requirements', status: 'pending' },
+      { id: 2, text: 'Mapping workflow steps', status: 'pending' },
+      { id: 3, text: 'Designing data flow', status: 'pending' },
+      { id: 4, text: 'Generating implementation code', status: 'pending' },
+      { id: 5, text: 'Creating deployment instructions', status: 'pending' }
+    );
+  } else if (msg.includes('design') || msg.includes('brand') || msg.includes('logo') || msg.includes('ui') || msg.includes('ux')) {
+    steps.push(
+      { id: 1, text: 'Analyzing design brief', status: 'pending' },
+      { id: 2, text: 'Researching design trends', status: 'pending' },
+      { id: 3, text: 'Creating color palette & typography', status: 'pending' },
+      { id: 4, text: 'Generating design concepts', status: 'pending' },
+      { id: 5, text: 'Compiling brand guidelines', status: 'pending' }
+    );
+  } else {
+    steps.push(
+      { id: 1, text: 'Understanding your request', status: 'pending' },
+      { id: 2, text: 'Researching and analyzing', status: 'pending' },
+      { id: 3, text: 'Formulating comprehensive response', status: 'pending' },
+      { id: 4, text: 'Refining and formatting output', status: 'pending' }
+    );
+  }
+  return steps;
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function addNotification(title, body, type = 'info') {
+  const notif = {
+    id: Date.now().toString(),
+    title, body, type,
+    createdAt: new Date().toISOString(),
+    read: false
+  };
+  notifications.unshift(notif);
+  updateNotificationBadge();
+  renderNotifications();
+}
+
+function updateNotificationBadge() {
+  const countEl = document.getElementById('notif-count');
+  const unread = notifications.filter(n => !n.read).length;
+  if (!countEl) return;
+  if (unread > 0) {
+    countEl.textContent = unread > 9 ? '9+' : unread;
+    countEl.classList.remove('hidden');
+    countEl.classList.add('flex');
+  } else {
+    countEl.classList.add('hidden');
+    countEl.classList.remove('flex');
+  }
+}
+
+function toggleNotifications() {
+  const panel = document.getElementById('notification-panel');
+  if (!panel) return;
+  panel.classList.toggle('hidden');
+  // Mark all as read
+  notifications.forEach(n => n.read = true);
+  updateNotificationBadge();
+}
+
+function clearNotifications() {
+  notifications = [];
+  updateNotificationBadge();
+  renderNotifications();
+}
+
+function renderNotifications() {
+  const list = document.getElementById('notification-list');
+  if (!list) return;
+  if (notifications.length === 0) {
+    list.innerHTML = '<div class="px-3 py-6 text-center text-manus-text-dim text-xs"><i class="fas fa-check-circle text-lg mb-2 block opacity-30"></i>No new notifications</div>';
+    return;
+  }
+  list.innerHTML = notifications.slice(0, 20).map(n => {
+    const icons = { info: 'fa-circle-info text-blue-400', success: 'fa-circle-check text-green-400', warning: 'fa-triangle-exclamation text-amber-400', error: 'fa-circle-xmark text-red-400' };
+    const timeAgo = getTimeAgo(n.createdAt);
+    return `<div class="notif-item ${n.read ? '' : 'unread'}">
+      <div class="flex items-start gap-2.5">
+        <i class="fas ${icons[n.type] || icons.info} text-sm mt-0.5"></i>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium">${escapeHtml(n.title)}</div>
+          <div class="text-[11px] text-manus-text-dim mt-0.5">${escapeHtml(n.body)}</div>
+          <div class="text-[10px] text-manus-text-dim mt-1">${timeAgo}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getTimeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+  return Math.floor(diff / 86400000) + 'd ago';
+}
+
+// ============================================================
+// PERSISTENCE - Supabase PostgreSQL
+// ============================================================
 async function initializeFromDatabase() {
   updateSyncStatus('Connecting to Supabase...');
   try {
     const res = await fetch('/api/health');
     const data = await res.json();
     dbAvailable = data.services?.supabase === true || data.services?.database === true;
-  } catch {
-    dbAvailable = false;
-  }
+  } catch { dbAvailable = false; }
 
   updateDBBadge();
   updateStorageInfo();
@@ -143,27 +285,18 @@ async function loadAllFromDatabase() {
   if (!dbAvailable) return;
   try {
     updateSyncStatus('Loading data...');
-
     const [convRes, profileRes] = await Promise.all([
       fetch(`/api/db/conversations/${encodeURIComponent(userId)}`),
       fetch(`/api/db/profile/${encodeURIComponent(userId)}`)
     ]);
-
     const convData = await convRes.json();
     const profileData = await profileRes.json();
-
-    // Load conversations
-    if (convData.success && convData.data) {
-      conversations = convData.data;
-    }
-
-    // Load profile (credits, usage history, settings)
+    if (convData.success && convData.data) conversations = convData.data;
     if (profileData.success && profileData.data) {
       credits = profileData.data.credits ?? 1000;
       totalCredits = profileData.data.totalCredits ?? 1000;
       if (profileData.data.usageHistory) usageHistory = profileData.data.usageHistory;
     }
-
     dataLoaded = true;
     renderConversationList();
     updateAllCreditDisplays();
@@ -179,15 +312,12 @@ async function loadAllFromDatabase() {
 function updateDBBadge() {
   const badge = document.getElementById('db-badge');
   if (!badge) return;
+  badge.classList.remove('hidden');
   if (dbAvailable) {
-    badge.classList.remove('hidden');
-    badge.classList.add('flex', 'bg-green-500/10', 'border', 'border-green-500/20', 'text-green-400');
-    badge.classList.remove('bg-amber-500/10', 'border-amber-500/20', 'text-amber-400');
+    badge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-green-500/10 border border-green-500/20 text-green-400';
     document.getElementById('db-badge-text').textContent = 'Supabase';
   } else {
-    badge.classList.remove('hidden');
-    badge.classList.add('flex', 'bg-amber-500/10', 'border', 'border-amber-500/20', 'text-amber-400');
-    badge.classList.remove('bg-green-500/10', 'border-green-500/20', 'text-green-400');
+    badge.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400';
     document.getElementById('db-badge-text').textContent = 'Offline';
   }
 }
@@ -210,20 +340,16 @@ function updateStorageInfo() {
 }
 
 function updateSyncStatus(text) {
-  const statusEl = document.getElementById('sync-status');
   const textEl = document.getElementById('sync-status-text');
-  if (!statusEl || !textEl) return;
-  textEl.textContent = text;
+  if (textEl) textEl.textContent = text;
 }
 
-// Save conversations to Supabase
 async function saveConversationsToDB() {
   if (!dbAvailable) return;
   try {
     updateSyncStatus('Saving...');
     await fetch('/api/db/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, conversations })
     });
     updateSyncStatus('Synced');
@@ -233,22 +359,18 @@ async function saveConversationsToDB() {
   }
 }
 
-// Update profile (credits) in Supabase
 async function updateProfileInDB(extra = {}) {
   if (!dbAvailable) return;
   try {
     await fetch('/api/db/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, credits, totalCredits, ...extra })
     });
-  } catch (err) {
-    console.warn('Failed to update profile:', err.message);
-  }
+  } catch (err) { console.warn('Failed to update profile:', err.message); }
 }
 
 // ============================================================
-// 3. PAYMENT INTEGRATION (Stripe / LemonSqueezy)
+// PAYMENT INTEGRATION
 // ============================================================
 let paymentAvailable = false;
 
@@ -258,10 +380,7 @@ async function checkPaymentAvailability() {
     const data = await res.json();
     paymentAvailable = data.services?.stripe === true || data.services?.lemonsqueezy === true;
     updatePaymentStatus();
-  } catch {
-    paymentAvailable = false;
-    updatePaymentStatus();
-  }
+  } catch { paymentAvailable = false; updatePaymentStatus(); }
 }
 
 function updatePaymentStatus() {
@@ -272,7 +391,7 @@ function updatePaymentStatus() {
     statusEl.innerHTML = '<i class="fas fa-check-circle"></i><span>Payment gateway connected</span>';
   } else {
     statusEl.className = 'mb-4 p-3 rounded-xl text-xs flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-300';
-    statusEl.innerHTML = '<i class="fas fa-info-circle"></i><span>Demo mode - Configure Stripe or LemonSqueezy keys for real payments</span>';
+    statusEl.innerHTML = '<i class="fas fa-info-circle"></i><span>Demo mode - Configure Stripe or LemonSqueezy for real payments</span>';
   }
 }
 
@@ -280,52 +399,30 @@ async function handlePurchase(plan) {
   showToast('Preparing checkout...', 'info');
   try {
     const res = await fetch('/api/payment/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan, userId, returnUrl: window.location.origin })
     });
     const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else if (data.code === 'PAYMENT_NOT_CONFIGURED' || data.demoMode) {
-      showPurchaseDemo(plan);
-    } else {
-      showToast(data.error || 'Payment error', 'error');
-    }
-  } catch (err) {
-    showToast('Payment service unavailable. Running in demo mode.', 'warning');
-    showPurchaseDemo(plan);
-  }
+    if (data.url) window.location.href = data.url;
+    else if (data.code === 'PAYMENT_NOT_CONFIGURED' || data.demoMode) showPurchaseDemo(plan);
+    else showToast(data.error || 'Payment error', 'error');
+  } catch { showToast('Payment service unavailable. Running in demo mode.', 'warning'); showPurchaseDemo(plan); }
 }
 
 function showPurchaseDemo(plan) {
   const creditsMap = { starter: 5000, pro: 20000 };
   const priceMap = { starter: '$9.99', pro: '$29.99' };
   const addCredits = creditsMap[plan] || 0;
-
-  if (confirm(`DEMO MODE\n\nPurchase ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan for ${priceMap[plan]}?\nThis will add ${addCredits.toLocaleString()} credits.\n\n(In production, Stripe/LemonSqueezy checkout will open)`)) {
+  if (confirm(`DEMO MODE\n\nPurchase ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan for ${priceMap[plan]}?\nThis will add ${addCredits.toLocaleString()} credits.`)) {
     credits += addCredits;
     totalCredits += addCredits;
-
-    usageHistory.unshift({
-      detail: `Purchased ${plan} plan (demo)`,
-      date: new Date().toISOString().split('T')[0],
-      change: `+${addCredits}`,
-      type: 'purchase'
-    });
-
+    usageHistory.unshift({ detail: `Purchased ${plan} plan (demo)`, date: new Date().toISOString().split('T')[0], change: `+${addCredits}`, type: 'purchase' });
     updateAllCreditDisplays();
     checkCreditsStatus();
-
-    // Save to Supabase
-    updateProfileInDB({
-      detail: `Purchased ${plan} plan (demo)`,
-      change: addCredits,
-      type: 'purchase'
-    });
-
+    updateProfileInDB({ detail: `Purchased ${plan} plan (demo)`, change: addCredits, type: 'purchase' });
     closeSettings();
     showToast(`${addCredits.toLocaleString()} credits added successfully!`, 'success');
+    addNotification('Purchase Complete', `${addCredits.toLocaleString()} credits added to your account.`, 'success');
   }
 }
 
@@ -338,18 +435,9 @@ function checkPaymentReturn() {
     if (addCredits > 0) {
       credits += addCredits;
       totalCredits += addCredits;
-      usageHistory.unshift({
-        detail: `Purchased ${plan} plan via ${provider}`,
-        date: new Date().toISOString().split('T')[0],
-        change: `+${addCredits}`,
-        type: 'purchase'
-      });
+      usageHistory.unshift({ detail: `Purchased ${plan} plan via ${provider}`, date: new Date().toISOString().split('T')[0], change: `+${addCredits}`, type: 'purchase' });
       updateAllCreditDisplays();
-      updateProfileInDB({
-        detail: `Purchased ${plan} plan via ${provider}`,
-        change: addCredits,
-        type: 'purchase'
-      });
+      updateProfileInDB({ detail: `Purchased ${plan} plan via ${provider}`, change: addCredits, type: 'purchase' });
       showToast(`Payment successful! ${addCredits.toLocaleString()} credits added.`, 'success', 6000);
     }
     window.history.replaceState({}, '', '/');
@@ -360,16 +448,13 @@ function checkPaymentReturn() {
 }
 
 // ============================================================
-// 4. CREDIT SYSTEM + ERROR HANDLING
+// CREDIT SYSTEM
 // ============================================================
-
 function updateAllCreditDisplays() {
   const headerEl = document.getElementById('header-credits');
   if (headerEl) headerEl.textContent = credits.toLocaleString();
-
   const balanceEl = document.getElementById('credit-balance');
   if (balanceEl) balanceEl.textContent = credits.toLocaleString();
-
   const progressBar = document.getElementById('credit-progress-bar');
   if (progressBar) {
     const pct = totalCredits > 0 ? Math.max(0, (credits / totalCredits) * 100) : 0;
@@ -378,13 +463,10 @@ function updateAllCreditDisplays() {
     else if (pct < 25) progressBar.className = progressBar.className.replace(/from-\S+ to-\S+/, 'from-amber-500 to-amber-400');
     else progressBar.className = progressBar.className.replace(/from-\S+ to-\S+/, 'from-manus-accent to-purple-500');
   }
-
   const usedLabel = document.getElementById('credits-used-label');
   if (usedLabel) usedLabel.textContent = `${(totalCredits - credits).toLocaleString()} used`;
-
   const totalLabel = document.getElementById('credits-total-label');
   if (totalLabel) totalLabel.textContent = `${totalCredits.toLocaleString()} total`;
-
   if (headerEl) {
     headerEl.classList.remove('text-red-400', 'text-amber-400');
     if (credits <= 0) headerEl.classList.add('text-red-400');
@@ -411,24 +493,11 @@ function dismissCreditsWarning() {
 function deductCredits(model, taskDescription) {
   const cost = MODEL_COSTS[model] || 15;
   credits = Math.max(0, credits - cost);
-
-  const historyEntry = {
-    detail: taskDescription.substring(0, 50),
-    date: new Date().toISOString().split('T')[0],
-    change: `-${cost}`,
-    type: 'usage'
-  };
+  const historyEntry = { detail: taskDescription.substring(0, 50), date: new Date().toISOString().split('T')[0], change: `-${cost}`, type: 'usage' };
   usageHistory.unshift(historyEntry);
-
   updateAllCreditDisplays();
   checkCreditsStatus();
-
-  // Save to Supabase
-  updateProfileInDB({
-    detail: historyEntry.detail,
-    change: -cost,
-    type: 'usage'
-  });
+  updateProfileInDB({ detail: historyEntry.detail, change: -cost, type: 'usage' });
 }
 
 // ============================================================
@@ -436,11 +505,8 @@ function deductCredits(model, taskDescription) {
 // ============================================================
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
-  if (window.innerWidth <= 768) {
-    sidebar.classList.toggle('mobile-open');
-  } else {
-    sidebar.classList.toggle('sidebar-collapsed');
-  }
+  if (window.innerWidth <= 768) sidebar.classList.toggle('mobile-open');
+  else sidebar.classList.toggle('sidebar-collapsed');
 }
 
 function newChat() {
@@ -455,22 +521,14 @@ function newChat() {
   document.getElementById('message-input').value = '';
   document.getElementById('send-btn').disabled = true;
   updateActiveConversation();
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.remove('mobile-open');
-  }
+  if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('mobile-open');
 }
 
 function createConversation(title) {
   const id = Date.now().toString();
-  const conv = {
-    id,
-    title: title.substring(0, 60),
-    messages: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
+  const conv = { id, title: title.substring(0, 60), messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   conversations.unshift(conv);
-  saveConversationsToDB(); // Save to Supabase
+  saveConversationsToDB();
   renderConversationList();
   return id;
 }
@@ -487,9 +545,7 @@ function loadConversation(id) {
   currentMessages.forEach(msg => renderMessage(msg.role, msg.content, false));
   updateActiveConversation();
   scrollToBottom();
-  if (window.innerWidth <= 768) {
-    document.getElementById('sidebar').classList.remove('mobile-open');
-  }
+  if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('mobile-open');
 }
 
 async function deleteConversation(id, e) {
@@ -498,25 +554,16 @@ async function deleteConversation(id, e) {
   conversations = conversations.filter(c => c.id !== id);
   renderConversationList();
   if (currentConversationId === id) newChat();
-
-  // Delete from Supabase
   if (dbAvailable) {
-    try {
-      await fetch(`/api/db/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    } catch (err) {
-      console.warn('Failed to delete from DB:', err);
-    }
+    try { await fetch(`/api/db/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch {}
   }
 }
 
 async function clearAllConversations() {
   if (confirm('Are you sure you want to delete ALL conversations? This cannot be undone.')) {
-    // Delete each from Supabase
     if (dbAvailable) {
       for (const c of conversations) {
-        try {
-          await fetch(`/api/db/conversations/${encodeURIComponent(c.id)}`, { method: 'DELETE' });
-        } catch {}
+        try { await fetch(`/api/db/conversations/${encodeURIComponent(c.id)}`, { method: 'DELETE' }); } catch {}
       }
     }
     conversations = [];
@@ -526,10 +573,7 @@ async function clearAllConversations() {
   }
 }
 
-function saveConversations() {
-  // All persistence goes to Supabase
-  saveConversationsToDB();
-}
+function saveConversations() { saveConversationsToDB(); }
 
 function updateActiveConversation() {
   document.querySelectorAll('.conv-item').forEach(el => {
@@ -541,8 +585,7 @@ function renderConversationList() {
   const container = document.getElementById('conversations-list');
   if (!container) return;
   if (conversations.length === 0) {
-    container.innerHTML = `<div class="px-4 py-8 text-center text-manus-text-dim text-xs">
-      <i class="fas fa-message text-2xl mb-2 block opacity-30"></i>No conversations yet</div>`;
+    container.innerHTML = '<div class="px-4 py-8 text-center text-manus-text-dim text-xs"><i class="fas fa-message text-2xl mb-2 block opacity-30"></i>No conversations yet</div>';
     return;
   }
   const today = new Date().toDateString();
@@ -556,15 +599,15 @@ function renderConversationList() {
   });
   let html = '';
   if (groups.today.length) {
-    html += `<div class="px-3 py-2 text-xs font-medium text-manus-text-dim uppercase tracking-wider">Today</div>`;
+    html += '<div class="px-3 py-2 text-xs font-medium text-manus-text-dim uppercase tracking-wider">Today</div>';
     groups.today.forEach(c => html += convItemHTML(c));
   }
   if (groups.yesterday.length) {
-    html += `<div class="px-3 py-2 mt-2 text-xs font-medium text-manus-text-dim uppercase tracking-wider">Yesterday</div>`;
+    html += '<div class="px-3 py-2 mt-2 text-xs font-medium text-manus-text-dim uppercase tracking-wider">Yesterday</div>';
     groups.yesterday.forEach(c => html += convItemHTML(c));
   }
   if (groups.older.length) {
-    html += `<div class="px-3 py-2 mt-2 text-xs font-medium text-manus-text-dim uppercase tracking-wider">Previous</div>`;
+    html += '<div class="px-3 py-2 mt-2 text-xs font-medium text-manus-text-dim uppercase tracking-wider">Previous</div>';
     groups.older.forEach(c => html += convItemHTML(c));
   }
   container.innerHTML = html;
@@ -572,14 +615,10 @@ function renderConversationList() {
 }
 
 function convItemHTML(conv) {
-  return `<div class="conv-item flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer group border border-transparent" 
-    data-id="${conv.id}" onclick="loadConversation('${conv.id}')">
+  return `<div class="conv-item flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer group border border-transparent" data-id="${conv.id}" onclick="loadConversation('${conv.id}')">
     <i class="fas fa-message text-xs text-manus-text-dim"></i>
     <span class="flex-1 text-sm truncate">${escapeHtml(conv.title)}</span>
-    <button onclick="deleteConversation('${conv.id}', event)" 
-      class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-manus-surface3 text-manus-text-dim transition-all">
-      <i class="fas fa-trash text-[10px]"></i>
-    </button>
+    <button onclick="deleteConversation('${conv.id}', event)" class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-manus-surface3 text-manus-text-dim transition-all"><i class="fas fa-trash text-[10px]"></i></button>
   </div>`;
 }
 
@@ -605,6 +644,12 @@ function renderMessage(role, content, animate = true) {
   area.appendChild(div);
   div.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
   addCopyButtons(div);
+
+  // Detect and render multimodal outputs
+  if (role === 'assistant') {
+    detectAndRenderSlides(content, div);
+    detectAndRenderWebPreview(content, div);
+  }
 }
 
 function addCopyButtons(container) {
@@ -620,33 +665,88 @@ function addCopyButtons(container) {
   });
 }
 
-function renderThinkingIndicator() {
+// ============================================================
+// AGENT MODE: THINKING PROCESS UI
+// ============================================================
+function renderThinkingIndicator(taskSteps) {
   const area = document.getElementById('messages-area');
   if (!area) return null;
   const div = document.createElement('div');
   div.id = 'thinking-indicator';
   div.className = 'mb-6 message-bubble';
+
+  const isAgent = agentModeEnabled && taskSteps && taskSteps.length > 0;
+  const panelClass = isAgent ? 'agent-execution-panel' : 'execution-panel';
+
+  let stepsHtml = '';
+  if (isAgent && taskSteps) {
+    stepsHtml = `<div class="task-checklist" id="task-checklist">
+      ${taskSteps.map((s, i) => `<div class="task-checklist-item ${i === 0 ? 'active' : ''}" data-step="${s.id}">
+        <div class="task-check">${i === 0 ? '<i class="fas fa-spinner fa-spin text-[8px]"></i>' : '<span class="text-[8px]">${s.id}</span>'}</div>
+        <span class="text-manus-text-muted flex-1">${s.text}</span>
+        <span class="task-status pending text-[10px]">${i === 0 ? 'Running' : 'Pending'}</span>
+      </div>`).join('')}
+    </div>`;
+  } else {
+    stepsHtml = `<div class="execution-steps" id="execution-steps">
+      <div class="step-item agent-step"><div class="step-icon active"><i class="fas fa-circle text-[6px]"></i></div><span class="text-manus-text-muted">Analyzing your request...</span></div>
+    </div>`;
+  }
+
   div.innerHTML = `<div class="flex gap-3">
     <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center mt-1">
       <i class="fas fa-robot text-white text-xs"></i></div>
     <div class="flex-1">
-      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">Manus</div>
-      <div class="execution-panel">
+      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">Manus ${isAgent ? '<span class="text-manus-accent ml-1">Agent</span>' : ''}</div>
+      <div class="${panelClass}">
         <div class="execution-header">
           <div class="agent-spinner w-4 h-4 border-2 border-manus-accent/30 border-t-manus-accent rounded-full"></div>
-          <span class="text-xs font-medium text-manus-text-muted" id="thinking-status">Working on your task...</span>
+          <span class="text-xs font-medium text-manus-text-muted" id="thinking-status">${isAgent ? 'Executing task plan...' : 'Working on your task...'}</span>
         </div>
-        <div class="execution-steps" id="execution-steps">
-          <div class="step-item agent-step">
-            <div class="step-icon active"><i class="fas fa-circle text-[6px]"></i></div>
-            <span class="text-manus-text-muted">Analyzing your request...</span>
-          </div>
-        </div>
+        ${stepsHtml}
       </div>
     </div></div>`;
   area.appendChild(div);
   scrollToBottom();
   return div;
+}
+
+function advanceAgentStep(stepId) {
+  const checklist = document.getElementById('task-checklist');
+  if (!checklist) return;
+  const items = checklist.querySelectorAll('.task-checklist-item');
+  items.forEach(item => {
+    const sid = parseInt(item.dataset.step);
+    const check = item.querySelector('.task-check');
+    const status = item.querySelector('.task-status');
+    if (sid < stepId) {
+      item.className = 'task-checklist-item completed';
+      check.innerHTML = '<i class="fas fa-check text-[8px]"></i>';
+      status.textContent = 'Done';
+      status.className = 'task-status success text-[10px]';
+    } else if (sid === stepId) {
+      item.className = 'task-checklist-item active';
+      check.innerHTML = '<i class="fas fa-spinner fa-spin text-[8px]"></i>';
+      status.textContent = 'Running';
+      status.className = 'task-status executing text-[10px]';
+    }
+  });
+  scrollToBottom();
+}
+
+function completeAllAgentSteps() {
+  const checklist = document.getElementById('task-checklist');
+  if (!checklist) return;
+  checklist.querySelectorAll('.task-checklist-item').forEach(item => {
+    item.className = 'task-checklist-item completed';
+    const check = item.querySelector('.task-check');
+    const status = item.querySelector('.task-status');
+    check.innerHTML = '<i class="fas fa-check text-[8px]"></i>';
+    status.textContent = 'Done';
+    status.className = 'task-status success text-[10px]';
+  });
+  const thinkingStatus = document.getElementById('thinking-status');
+  if (thinkingStatus) thinkingStatus.textContent = 'All steps completed!';
 }
 
 function addExecutionStep(text, status = 'active') {
@@ -703,11 +803,204 @@ function finalizeStreamingMessage(text) {
     parent.id = '';
     parent.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
     addCopyButtons(parent);
+    // Detect multimodal
+    detectAndRenderSlides(text, parent);
+    detectAndRenderWebPreview(text, parent);
   }
 }
 
 // ============================================================
-// SEND MESSAGE (with all 4 protections)
+// MULTIMODAL: SLIDES GENERATOR
+// ============================================================
+function detectAndRenderSlides(content, container) {
+  // Look for slide-like markdown patterns
+  const slidePattern = /## Slide \d+[:\s]/gi;
+  const hasSlides = slidePattern.test(content);
+  if (!hasSlides) return;
+
+  const slides = parseSlides(content);
+  if (slides.length < 2) return;
+
+  currentSlides = slides;
+  currentSlideIndex = 0;
+
+  const slideCard = document.createElement('div');
+  slideCard.className = 'mt-4';
+  slideCard.innerHTML = `
+    <div class="slide-card" onclick="openSlidePreview()">
+      <div class="slide-card-header">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-file-powerpoint text-orange-400 text-xs"></i>
+          <span class="text-xs font-medium text-white/80">Presentation (${slides.length} slides)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-white/40">Click to preview</span>
+          <i class="fas fa-expand text-white/40 text-[10px]"></i>
+        </div>
+      </div>
+      <div class="slide-card-body slide-theme-dark">
+        <div class="slide-mini">
+          <h3>${escapeHtml(slides[0].title)}</h3>
+          <p class="text-white/60 text-xs">${escapeHtml(slides[0].subtitle || slides[0].content.substring(0, 80))}</p>
+        </div>
+      </div>
+    </div>`;
+
+  // Insert after the markdown body
+  const mdBody = container.querySelector('.markdown-body');
+  if (mdBody) mdBody.after(slideCard);
+  else container.appendChild(slideCard);
+}
+
+function parseSlides(content) {
+  const sections = content.split(/(?=## Slide \d+)/gi);
+  const slides = [];
+  sections.forEach(section => {
+    const titleMatch = section.match(/## Slide \d+[:\s]*(.+)/i);
+    if (!titleMatch) return;
+    const title = titleMatch[1].trim();
+    const bodyText = section.replace(/## Slide \d+[:\s]*.+/i, '').trim();
+    const subtitleMatch = bodyText.match(/\*\*(.+?)\*\*/);
+    slides.push({
+      title,
+      subtitle: subtitleMatch ? subtitleMatch[1] : '',
+      content: bodyText,
+      bullets: bodyText.match(/^[-*]\s+.+/gm)?.map(b => b.replace(/^[-*]\s+/, '')) || []
+    });
+  });
+  return slides;
+}
+
+function openSlidePreview() {
+  if (currentSlides.length === 0) return;
+  document.getElementById('slide-preview-modal').classList.remove('hidden');
+  currentSlideIndex = 0;
+  renderCurrentSlide();
+}
+
+function closeSlidePreview() {
+  document.getElementById('slide-preview-modal').classList.add('hidden');
+}
+
+function prevSlide() {
+  if (currentSlideIndex > 0) { currentSlideIndex--; renderCurrentSlide(); }
+}
+
+function nextSlide() {
+  if (currentSlideIndex < currentSlides.length - 1) { currentSlideIndex++; renderCurrentSlide(); }
+}
+
+function renderCurrentSlide() {
+  const slide = currentSlides[currentSlideIndex];
+  if (!slide) return;
+  const counter = document.getElementById('slide-counter');
+  if (counter) counter.textContent = `Slide ${currentSlideIndex + 1} / ${currentSlides.length}`;
+  const titleEl = document.getElementById('slide-preview-title');
+  if (titleEl) titleEl.textContent = slide.title;
+
+  const content = document.getElementById('slide-content');
+  if (!content) return;
+
+  const themes = ['slide-theme-dark', 'slide-theme-accent', 'slide-theme-cool'];
+  content.className = `w-full max-w-[960px] aspect-[16/9] ${themes[currentSlideIndex % themes.length]} rounded-xl shadow-2xl overflow-hidden`;
+
+  const isTitle = currentSlideIndex === 0;
+  let html = `<div class="slide-render ${isTitle ? 'title-slide' : ''}">`;
+
+  if (isTitle) {
+    html += `<h1>${escapeHtml(slide.title)}</h1>`;
+    if (slide.subtitle) html += `<p class="subtitle">${escapeHtml(slide.subtitle)}</p>`;
+  } else {
+    html += `<h2>${escapeHtml(slide.title)}</h2>`;
+    if (slide.bullets.length > 0) {
+      html += '<ul>';
+      slide.bullets.forEach(b => { html += `<li>${escapeHtml(b)}</li>`; });
+      html += '</ul>';
+    } else if (slide.content) {
+      const lines = slide.content.split('\n').filter(l => l.trim());
+      lines.slice(0, 6).forEach(line => {
+        const cleanLine = line.replace(/\*\*/g, '').replace(/^#+\s*/, '');
+        if (cleanLine.trim()) html += `<p>${escapeHtml(cleanLine)}</p>`;
+      });
+    }
+  }
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// ============================================================
+// MULTIMODAL: WEB PREVIEW
+// ============================================================
+function detectAndRenderWebPreview(content, container) {
+  // Look for HTML code blocks
+  const htmlMatch = content.match(/```html\s*\n([\s\S]*?)```/);
+  if (!htmlMatch) return;
+
+  const htmlCode = htmlMatch[1].trim();
+  if (htmlCode.length < 50 || !htmlCode.includes('<')) return;
+  currentWebCode = htmlCode;
+
+  const previewCard = document.createElement('div');
+  previewCard.className = 'mt-4';
+  previewCard.innerHTML = `
+    <div class="web-preview-card" onclick="openWebPreview()">
+      <div class="web-preview-card-header">
+        <div class="browser-dots">
+          <span style="background:#ef4444cc"></span><span style="background:#f59e0bcc"></span><span style="background:#22c55ecc"></span>
+        </div>
+        <div class="flex-1 px-2 py-0.5 rounded bg-manus-surface2 text-[10px] text-manus-text-dim">preview://generated-page</div>
+      </div>
+      <div class="web-preview-card-body" id="web-card-preview-${Date.now()}"></div>
+      <div class="web-preview-card-footer">
+        <span class="text-xs text-manus-text-dim"><i class="fas fa-globe text-blue-400 mr-1"></i>Live Preview</span>
+        <span class="text-[10px] text-manus-text-dim">Click to open</span>
+      </div>
+    </div>`;
+
+  const mdBody = container.querySelector('.markdown-body');
+  if (mdBody) mdBody.after(previewCard);
+  else container.appendChild(previewCard);
+
+  // Render mini preview in card
+  const previewContainer = previewCard.querySelector('.web-preview-card-body');
+  if (previewContainer) {
+    const iframe = document.createElement('iframe');
+    iframe.sandbox = 'allow-scripts';
+    iframe.srcdoc = htmlCode;
+    previewContainer.appendChild(iframe);
+  }
+}
+
+function openWebPreview() {
+  if (!currentWebCode) return;
+  document.getElementById('web-preview-modal').classList.remove('hidden');
+  const frame = document.getElementById('web-preview-frame');
+  if (frame) frame.srcdoc = currentWebCode;
+  document.getElementById('web-preview-url').textContent = 'preview://generated-page';
+  // Reset to desktop
+  const container = document.getElementById('web-preview-container');
+  if (container) container.classList.remove('mobile-view');
+}
+
+function closeWebPreview() {
+  document.getElementById('web-preview-modal').classList.add('hidden');
+}
+
+function toggleWebPreviewDevice(device) {
+  const container = document.getElementById('web-preview-container');
+  if (!container) return;
+  if (device === 'mobile') container.classList.add('mobile-view');
+  else container.classList.remove('mobile-view');
+}
+
+function copyWebPreviewCode() {
+  if (currentWebCode) {
+    navigator.clipboard.writeText(currentWebCode).then(() => showToast('HTML code copied to clipboard!', 'success', 2000));
+  }
+}
+
+// ============================================================
+// SEND MESSAGE
 // ============================================================
 async function sendMessage() {
   const input = document.getElementById('message-input');
@@ -736,30 +1029,46 @@ async function sendMessage() {
   renderMessage('user', text);
   scrollToBottom();
 
-  // Save user message immediately to DB
   const conv = conversations.find(c => c.id === currentConversationId);
-  if (conv) {
-    conv.messages = [...currentMessages];
-    conv.updatedAt = new Date().toISOString();
-    saveConversations();
+  if (conv) { conv.messages = [...currentMessages]; conv.updatedAt = new Date().toISOString(); saveConversations(); }
+
+  // Agent mode: decompose task into steps
+  let taskSteps = null;
+  if (agentModeEnabled) {
+    taskSteps = decomposeTask(text);
+    // Track in agentTasks
+    const task = {
+      id: Date.now().toString(),
+      title: text.substring(0, 60),
+      status: 'executing',
+      steps: taskSteps,
+      createdAt: new Date().toISOString()
+    };
+    agentTasks.unshift(task);
   }
 
-  const thinkingEl = renderThinkingIndicator();
-  const steps = ['Understanding task context...', 'Planning execution steps...', 'Generating response...'];
+  const thinkingEl = renderThinkingIndicator(taskSteps);
+
+  // Step animation
   let stepIndex = 0;
-  const stepInterval = setInterval(() => {
-    if (stepIndex < steps.length) { addExecutionStep(steps[stepIndex]); stepIndex++; }
-  }, 800);
+  let stepInterval;
+  if (agentModeEnabled && taskSteps) {
+    stepInterval = setInterval(() => {
+      stepIndex++;
+      if (stepIndex < taskSteps.length) advanceAgentStep(taskSteps[stepIndex].id);
+      else clearInterval(stepInterval);
+    }, 1200);
+  } else {
+    const defaultSteps = ['Understanding task context...', 'Planning execution steps...', 'Generating response...'];
+    stepInterval = setInterval(() => {
+      if (stepIndex < defaultSteps.length) { addExecutionStep(defaultSteps[stepIndex]); stepIndex++; }
+    }, 800);
+  }
 
   try {
     const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
-        model: selectedModel,
-        credits: credits
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: currentMessages.map(m => ({ role: m.role, content: m.content })), model: selectedModel, credits })
     });
 
     clearInterval(stepInterval);
@@ -767,18 +1076,8 @@ async function sendMessage() {
     if (!response.ok) {
       let errorData = {};
       try { errorData = await response.json(); } catch {}
-      if (response.status === 402 || errorData.code === 'CREDITS_EXHAUSTED') {
-        removeThinkingIndicator();
-        renderErrorMessage('credits_exhausted');
-        isStreaming = false;
-        return;
-      }
-      if (response.status === 429) {
-        removeThinkingIndicator();
-        renderErrorMessage('rate_limited');
-        isStreaming = false;
-        return;
-      }
+      if (response.status === 402 || errorData.code === 'CREDITS_EXHAUSTED') { removeThinkingIndicator(); renderErrorMessage('credits_exhausted'); isStreaming = false; return; }
+      if (response.status === 429) { removeThinkingIndicator(); renderErrorMessage('rate_limited'); isStreaming = false; return; }
       throw new Error(errorData.error || `API error: ${response.status}`);
     }
 
@@ -793,13 +1092,11 @@ async function sendMessage() {
         document.getElementById('fallback-badge-text').textContent = 'Offline mode';
         const status = document.getElementById('thinking-status');
         if (status) status.textContent = 'Using offline intelligence...';
-        showToast('AI service unavailable. Using offline mode with reduced capabilities.', 'warning');
-        if (consecutiveAPIFailures >= MAX_API_FAILURES_BEFORE_WARNING) {
-          document.getElementById('api-error-overlay').classList.remove('hidden');
-        }
+        showToast('AI service unavailable. Using offline mode.', 'warning');
+        if (consecutiveAPIFailures >= MAX_API_FAILURES_BEFORE_WARNING) document.getElementById('api-error-overlay').classList.remove('hidden');
       } else {
         document.getElementById('fallback-badge-text').textContent = `Switched to ${modelUsed === 'gpt-5-nano' ? 'Lite' : modelUsed}`;
-        showToast(`Primary model unavailable. Automatically switched to Lite model.`, 'warning');
+        showToast('Primary model unavailable. Switched to fallback.', 'warning');
       }
     } else {
       consecutiveAPIFailures = 0;
@@ -807,7 +1104,9 @@ async function sendMessage() {
       if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
     }
 
-    addExecutionStep('Task completed', 'completed');
+    if (agentModeEnabled && taskSteps) completeAllAgentSteps();
+    else addExecutionStep('Task completed', 'completed');
+
     await sleep(500);
     removeThinkingIndicator();
     renderStreamingMessage();
@@ -826,24 +1125,26 @@ async function sendMessage() {
     }
 
     finalizeStreamingMessage(fullContent);
-
     currentMessages.push({ role: 'assistant', content: fullContent });
-    if (conv) {
-      conv.messages = [...currentMessages];
-      conv.updatedAt = new Date().toISOString();
-      saveConversations(); // Save to Supabase
-    }
-
+    if (conv) { conv.messages = [...currentMessages]; conv.updatedAt = new Date().toISOString(); saveConversations(); }
     deductCredits(modelUsed === 'local-fallback' ? 'gpt-5-nano' : modelUsed, text);
+
+    // Agent mode: update task status and notify
+    if (agentModeEnabled && agentTasks.length > 0) {
+      agentTasks[0].status = 'success';
+      addNotification('Task Completed', `"${text.substring(0, 40)}..." finished successfully.`, 'success');
+    }
 
   } catch (error) {
     clearInterval(stepInterval);
     removeThinkingIndicator();
     consecutiveAPIFailures++;
     renderErrorMessage('generic', error.message);
-    if (consecutiveAPIFailures >= MAX_API_FAILURES_BEFORE_WARNING) {
-      document.getElementById('api-error-overlay').classList.remove('hidden');
+    if (agentModeEnabled && agentTasks.length > 0) {
+      agentTasks[0].status = 'failed';
+      addNotification('Task Failed', `"${text.substring(0, 40)}..." encountered an error.`, 'error');
     }
+    if (consecutiveAPIFailures >= MAX_API_FAILURES_BEFORE_WARNING) document.getElementById('api-error-overlay').classList.remove('hidden');
   }
 
   isStreaming = false;
@@ -851,46 +1152,20 @@ async function sendMessage() {
 }
 
 // ============================================================
-// 4. CUSTOM ERROR UI
+// ERROR UI
 // ============================================================
 function renderErrorMessage(type, details = '') {
   const area = document.getElementById('messages-area');
   if (!area) return;
   const div = document.createElement('div');
   div.className = 'mb-6 message-bubble';
-
   const errors = {
-    credits_exhausted: {
-      icon: 'fa-coins', bgColor: 'bg-amber-500/5', borderColor: 'border-amber-500/20', titleColor: 'text-amber-300',
-      iconBg: 'bg-amber-500/10', iconColor: 'text-amber-400', title: 'Credits Exhausted',
-      message: 'You\'ve used all your available credits. Upgrade your plan to continue chatting with full AI capabilities.',
-      action: `<div class="flex gap-2 mt-3"><button onclick="openSettings(); showSettingsTab('billing')" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-sm font-medium transition-colors border border-amber-500/20"><i class="fas fa-arrow-up-right mr-1.5"></i>Upgrade Plan</button></div>`
-    },
-    rate_limited: {
-      icon: 'fa-clock', bgColor: 'bg-blue-500/5', borderColor: 'border-blue-500/20', titleColor: 'text-blue-300',
-      iconBg: 'bg-blue-500/10', iconColor: 'text-blue-400', title: 'Rate Limited',
-      message: 'Too many requests in a short time. Please wait a moment before trying again.',
-      action: `<button onclick="retryLastMessage()" class="mt-3 px-4 py-2 rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-300 text-sm hover:bg-blue-500/20 transition-colors"><i class="fas fa-rotate-right mr-1.5"></i>Retry in 10s</button>`
-    },
-    generic: {
-      icon: 'fa-circle-exclamation', bgColor: 'bg-red-500/5', borderColor: 'border-red-500/20', titleColor: 'text-red-300',
-      iconBg: 'bg-red-500/10', iconColor: 'text-red-400', title: 'Something went wrong',
-      message: details || 'An unexpected error occurred. The AI service may be temporarily unavailable.',
-      action: `<button onclick="retryLastMessage()" class="mt-3 px-4 py-2 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 text-sm hover:bg-red-500/20 transition-colors"><i class="fas fa-rotate-right mr-1.5"></i>Retry</button>`
-    }
+    credits_exhausted: { icon: 'fa-coins', bgColor: 'bg-amber-500/5', borderColor: 'border-amber-500/20', titleColor: 'text-amber-300', iconBg: 'bg-amber-500/10', iconColor: 'text-amber-400', title: 'Credits Exhausted', message: 'You\'ve used all credits. Upgrade to continue.', action: `<div class="flex gap-2 mt-3"><button onclick="openSettings(); showSettingsTab('billing')" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-sm font-medium transition-colors border border-amber-500/20"><i class="fas fa-arrow-up-right mr-1.5"></i>Upgrade Plan</button></div>` },
+    rate_limited: { icon: 'fa-clock', bgColor: 'bg-blue-500/5', borderColor: 'border-blue-500/20', titleColor: 'text-blue-300', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-400', title: 'Rate Limited', message: 'Too many requests. Wait a moment.', action: `<button onclick="retryLastMessage()" class="mt-3 px-4 py-2 rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-300 text-sm hover:bg-blue-500/20 transition-colors"><i class="fas fa-rotate-right mr-1.5"></i>Retry</button>` },
+    generic: { icon: 'fa-circle-exclamation', bgColor: 'bg-red-500/5', borderColor: 'border-red-500/20', titleColor: 'text-red-300', iconBg: 'bg-red-500/10', iconColor: 'text-red-400', title: 'Something went wrong', message: details || 'An error occurred.', action: `<button onclick="retryLastMessage()" class="mt-3 px-4 py-2 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 text-sm hover:bg-red-500/20 transition-colors"><i class="fas fa-rotate-right mr-1.5"></i>Retry</button>` }
   };
-
   const err = errors[type] || errors.generic;
-  div.innerHTML = `<div class="flex gap-3">
-    <div class="flex-shrink-0 w-8 h-8 rounded-lg ${err.iconBg} flex items-center justify-center mt-1"><i class="fas ${err.icon} ${err.iconColor} text-sm"></i></div>
-    <div class="flex-1">
-      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">System</div>
-      <div class="p-4 ${err.bgColor} border ${err.borderColor} rounded-xl">
-        <div class="font-medium text-sm ${err.titleColor} mb-1">${err.title}</div>
-        <div class="text-sm text-manus-text-muted">${err.message}</div>
-        ${err.action}
-      </div>
-    </div></div>`;
+  div.innerHTML = `<div class="flex gap-3"><div class="flex-shrink-0 w-8 h-8 rounded-lg ${err.iconBg} flex items-center justify-center mt-1"><i class="fas ${err.icon} ${err.iconColor} text-sm"></i></div><div class="flex-1"><div class="text-xs text-manus-text-dim mb-1.5 font-medium">System</div><div class="p-4 ${err.bgColor} border ${err.borderColor} rounded-xl"><div class="font-medium text-sm ${err.titleColor} mb-1">${err.title}</div><div class="text-sm text-manus-text-muted">${err.message}</div>${err.action}</div></div></div>`;
   area.appendChild(div);
   scrollToBottom();
 }
@@ -913,11 +1188,9 @@ function quickAction(text) {
 }
 
 // ============================================================
-// MODEL SELECTOR
+// MODEL SELECTOR & SETTINGS
 // ============================================================
-function toggleModelDropdown() {
-  document.getElementById('model-dropdown').classList.toggle('hidden');
-}
+function toggleModelDropdown() { document.getElementById('model-dropdown').classList.toggle('hidden'); }
 function selectModel(id, name, icon) {
   selectedModel = id;
   document.getElementById('selected-model-name').textContent = name;
@@ -926,20 +1199,16 @@ function selectModel(id, name, icon) {
   showToast(`Model: ${name} (${MODEL_COSTS[id]} credits/msg)`, 'info', 2000);
 }
 
-// ============================================================
-// SETTINGS
-// ============================================================
 function openSettings() {
   document.getElementById('settings-modal').classList.remove('hidden');
   updateAllCreditDisplays();
   renderUsageHistory();
+  renderTasksList();
   updateAccountInfo();
   updateStorageInfo();
   checkPaymentAvailability();
 }
-function closeSettings() {
-  document.getElementById('settings-modal').classList.add('hidden');
-}
+function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
 function showSettingsTab(tab) {
   document.querySelectorAll('.settings-tab-content').forEach(el => el.classList.add('hidden'));
   document.querySelectorAll('.settings-tab-btn').forEach(el => el.classList.remove('active'));
@@ -948,22 +1217,39 @@ function showSettingsTab(tab) {
   if (tabEl) tabEl.classList.remove('hidden');
   if (btnEl) btnEl.classList.add('active');
 }
+
 function renderUsageHistory() {
   const container = document.getElementById('usage-history');
   if (!container) return;
-  if (usageHistory.length === 0) {
-    container.innerHTML = '<div class="py-4 text-center text-manus-text-dim text-xs">No usage history yet</div>';
-    return;
-  }
+  if (usageHistory.length === 0) { container.innerHTML = '<div class="py-4 text-center text-manus-text-dim text-xs">No usage history yet</div>'; return; }
   container.innerHTML = usageHistory.slice(0, 50).map(item => {
     const isPositive = String(item.change).startsWith('+');
     const typeIcon = item.type === 'purchase' ? '<i class="fas fa-credit-card text-green-400 mr-1"></i>' :
                      item.type === 'bonus' ? '<i class="fas fa-gift text-purple-400 mr-1"></i>' :
                      '<i class="fas fa-message text-manus-text-dim mr-1"></i>';
-    return `<div class="grid grid-cols-3 py-3 text-sm">
-      <span class="truncate pr-4">${typeIcon}${escapeHtml(item.detail)}</span>
-      <span class="text-manus-text-muted">${item.date}</span>
-      <span class="text-right font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}">${item.change}</span>
+    return `<div class="grid grid-cols-3 py-3 text-sm"><span class="truncate pr-4">${typeIcon}${escapeHtml(item.detail)}</span><span class="text-manus-text-muted">${item.date}</span><span class="text-right font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}">${item.change}</span></div>`;
+  }).join('');
+}
+
+function renderTasksList() {
+  const container = document.getElementById('tasks-list');
+  if (!container) return;
+  if (agentTasks.length === 0) {
+    container.innerHTML = '<div class="px-4 py-8 text-center text-manus-text-dim text-xs"><i class="fas fa-list-check text-2xl mb-2 block opacity-30"></i>No tasks yet. Enable Agent Mode and send a request to start.</div>';
+    return;
+  }
+  container.innerHTML = agentTasks.slice(0, 20).map(task => {
+    const statusColors = { pending: 'bg-gray-500/10 text-gray-400 border-gray-500/20', executing: 'bg-manus-accent/10 text-manus-accent border-manus-accent/20', success: 'bg-green-500/10 text-green-400 border-green-500/20', failed: 'bg-red-500/10 text-red-400 border-red-500/20' };
+    const statusIcons = { pending: 'fa-clock', executing: 'fa-spinner fa-spin', success: 'fa-check-circle', failed: 'fa-times-circle' };
+    const sc = statusColors[task.status] || statusColors.pending;
+    const si = statusIcons[task.status] || statusIcons.pending;
+    return `<div class="p-4 bg-manus-surface2 rounded-xl border border-manus-border">
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <div class="text-sm font-medium flex-1">${escapeHtml(task.title)}</div>
+        <span class="task-status ${task.status} flex-shrink-0"><i class="fas ${si} text-[9px] mr-1"></i>${task.status.charAt(0).toUpperCase() + task.status.slice(1)}</span>
+      </div>
+      <div class="text-[11px] text-manus-text-dim">${new Date(task.createdAt).toLocaleString()}</div>
+      ${task.steps ? `<div class="mt-2 space-y-1">${task.steps.map(s => `<div class="flex items-center gap-2 text-[11px]"><i class="fas ${task.status === 'success' ? 'fa-check text-green-400' : task.status === 'failed' ? 'fa-times text-red-400' : 'fa-circle text-manus-text-dim'} text-[7px]"></i><span class="text-manus-text-muted">${escapeHtml(s.text)}</span></div>`).join('')}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -1010,5 +1296,14 @@ function copyCode(btn) {
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); newChat(); }
-  if (e.key === 'Escape') closeSettings();
+  if (e.key === 'Escape') {
+    closeSettings();
+    closeSlidePreview();
+    closeWebPreview();
+  }
+  // Slide navigation
+  if (document.getElementById('slide-preview-modal') && !document.getElementById('slide-preview-modal').classList.contains('hidden')) {
+    if (e.key === 'ArrowLeft') prevSlide();
+    if (e.key === 'ArrowRight') nextSlide();
+  }
 });

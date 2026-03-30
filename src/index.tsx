@@ -771,6 +771,11 @@ app.get('/docs', (c) => {
                     <i class="fas fa-cloud w-4 text-center text-amber-400/60"></i><span>L6: Deployment</span>
                 </button>
                 
+                <div class="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-3">Phase 4</div>
+                <button data-section="phase4" onclick="navigateTo('phase4')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
+                    <i class="fas fa-wand-magic-sparkles w-4 text-center text-purple-400/60"></i><span>Agentic Execution</span>
+                </button>
+                
                 <div class="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-3">Reports</div>
                 <button data-section="diagrams" onclick="navigateTo('diagrams')" class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400">
                     <i class="fas fa-diagram-project w-4 text-center"></i><span>Process Diagrams</span>
@@ -808,7 +813,7 @@ app.get('/docs', (c) => {
 })
 
 // ============================================================
-// MAIN HTML (SPA shell)
+// MAIN HTML (SPA shell) - Phase 4: Agentic Execution System
 // ============================================================
 app.get('/', (c) => {
   const html = `<!DOCTYPE html>
@@ -817,11 +822,11 @@ app.get('/', (c) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manus AI</title>
-    <meta name="description" content="Manus AI - Your autonomous AI agent for complex tasks, research, coding, design, and more.">
+    <meta name="description" content="Manus AI - Your autonomous AI agent. From idea to execution while you rest.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
@@ -867,6 +872,19 @@ app.get('/', (c) => {
                     <span class="ml-auto text-[10px] text-manus-text-dim border border-manus-border rounded px-1.5 py-0.5">Ctrl+K</span>
                 </button>
             </div>
+
+            <!-- Agent Mode Toggle -->
+            <div class="px-3 pb-2">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-manus-surface2 border border-manus-border">
+                    <i class="fas fa-wand-magic-sparkles text-manus-accent text-xs"></i>
+                    <span class="text-xs font-medium flex-1">Agent Mode</span>
+                    <label class="relative inline-flex items-center cursor-pointer" title="Deep execution for complex tasks">
+                        <input type="checkbox" id="agent-mode-toggle" class="sr-only peer" onchange="toggleAgentMode(this.checked)">
+                        <div class="w-9 h-5 bg-manus-surface3 rounded-full peer peer-checked:bg-manus-accent/60 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </label>
+                </div>
+            </div>
+
             <div class="flex-1 overflow-y-auto px-2 py-1" id="conversations-list">
                 <div class="px-4 py-8 text-center text-manus-text-dim text-xs">
                     <i class="fas fa-message text-2xl mb-2 block opacity-30"></i>
@@ -900,6 +918,11 @@ app.get('/', (c) => {
                         <i class="fas fa-bars"></i>
                     </button>
                     <div id="chat-title" class="text-sm font-medium text-manus-text-muted">New conversation</div>
+                    <!-- Agent Mode badge -->
+                    <div id="agent-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-manus-accent/10 border border-manus-accent/20 text-xs text-manus-accent">
+                        <i class="fas fa-wand-magic-sparkles text-[10px]"></i>
+                        <span>Agent</span>
+                    </div>
                     <div id="fallback-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400">
                         <i class="fas fa-triangle-exclamation text-[10px]"></i>
                         <span id="fallback-badge-text">Fallback mode</span>
@@ -910,6 +933,11 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <!-- Notification bell -->
+                    <button id="notification-bell" onclick="toggleNotifications()" class="relative p-2 rounded-lg hover:bg-manus-surface2 text-manus-text-muted transition-colors" title="Notifications">
+                        <i class="fas fa-bell text-sm"></i>
+                        <span id="notif-count" class="hidden absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">0</span>
+                    </button>
                     <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-manus-surface2 border border-manus-border text-sm cursor-pointer hover:border-manus-accent/30 transition-colors" onclick="openSettings(); showSettingsTab('usage')">
                         <i class="fas fa-sparkles text-manus-accent text-xs"></i>
                         <span id="header-credits" class="font-medium text-xs">1000</span>
@@ -945,6 +973,7 @@ app.get('/', (c) => {
             </header>
 
             <div id="chat-container" class="flex-1 overflow-y-auto">
+                <!-- LANDING PAGE - Manus Style -->
                 <div id="landing-page" class="flex flex-col items-center justify-center h-full px-4">
                     <div class="max-w-2xl w-full text-center">
                         <div class="mb-8 relative">
@@ -958,35 +987,41 @@ app.get('/', (c) => {
                             What can I do for you?
                         </h1>
                         <p class="text-manus-text-muted text-base mb-10">
-                            I'm Manus, your autonomous AI agent. I can help with complex tasks, research, coding, design, and more.
+                            I execute tasks autonomously while you focus on what matters. From slides to websites, research to automation.
                         </p>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-                            <button onclick="quickAction('Create a presentation about AI trends in 2025')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-manus-accent/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-manus-accent/5 hover:-translate-y-0.5">
+                        <!-- 4 Quick Action Cards -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                            <button onclick="quickAction('Create a professional presentation about AI trends in 2025 with 8 slides')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-orange-400/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-orange-400/5 hover:-translate-y-0.5">
                                 <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><i class="fas fa-file-powerpoint text-orange-400"></i></div>
-                                <div class="text-sm font-medium">Create slides</div>
+                                <div class="text-sm font-medium">Create Slides</div>
                                 <div class="text-xs text-manus-text-dim mt-1">Presentations & decks</div>
                             </button>
-                            <button onclick="quickAction('Build a modern landing page for a SaaS startup')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-manus-accent/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-manus-accent/5 hover:-translate-y-0.5">
+                            <button onclick="quickAction('Build a modern responsive landing page for a SaaS product with hero, features, pricing sections')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-blue-400/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-blue-400/5 hover:-translate-y-0.5">
                                 <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><i class="fas fa-globe text-blue-400"></i></div>
-                                <div class="text-sm font-medium">Build website</div>
-                                <div class="text-xs text-manus-text-dim mt-1">Web apps & sites</div>
+                                <div class="text-sm font-medium">Build Website</div>
+                                <div class="text-xs text-manus-text-dim mt-1">Web apps & pages</div>
                             </button>
-                            <button onclick="quickAction('Develop a React todo app with authentication')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-manus-accent/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-manus-accent/5 hover:-translate-y-0.5">
-                                <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><i class="fas fa-code text-green-400"></i></div>
-                                <div class="text-sm font-medium">Develop apps</div>
-                                <div class="text-xs text-manus-text-dim mt-1">Code & applications</div>
+                            <button onclick="quickAction('Automate a workflow: monitor RSS feeds, summarize new articles, and create a weekly digest email')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-green-400/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-green-400/5 hover:-translate-y-0.5">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><i class="fas fa-gears text-green-400"></i></div>
+                                <div class="text-sm font-medium">Automate Apps</div>
+                                <div class="text-xs text-manus-text-dim mt-1">Workflows & scripts</div>
                             </button>
-                            <button onclick="quickAction('Design a brand identity for a tech startup')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-manus-accent/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-manus-accent/5 hover:-translate-y-0.5">
+                            <button onclick="quickAction('Design a complete brand identity system: logo concept, color palette, typography, and usage guidelines')" class="group p-4 rounded-xl bg-manus-surface border border-manus-border hover:border-purple-400/40 transition-all duration-300 text-left hover:shadow-lg hover:shadow-purple-400/5 hover:-translate-y-0.5">
                                 <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><i class="fas fa-palette text-purple-400"></i></div>
-                                <div class="text-sm font-medium">Design</div>
-                                <div class="text-xs text-manus-text-dim mt-1">UI/UX & branding</div>
+                                <div class="text-sm font-medium">Design Concepts</div>
+                                <div class="text-xs text-manus-text-dim mt-1">Branding & UI/UX</div>
                             </button>
                         </div>
                         <div class="flex flex-wrap gap-2 justify-center">
-                            <button onclick="quickAction('Research the latest developments in quantum computing')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-flask mr-1.5 text-xs"></i>Research</button>
-                            <button onclick="quickAction('Analyze this dataset and create visualizations')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-chart-bar mr-1.5 text-xs"></i>Data analysis</button>
-                            <button onclick="quickAction('Write a comprehensive blog post about machine learning')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-pen-fancy mr-1.5 text-xs"></i>Writing</button>
-                            <button onclick="quickAction('Help me plan a marketing strategy for my product')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-bullhorn mr-1.5 text-xs"></i>Marketing</button>
+                            <button onclick="quickAction('Research the latest breakthroughs in quantum computing and write an executive summary')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-flask mr-1.5 text-xs"></i>Research</button>
+                            <button onclick="quickAction('Analyze this dataset and create interactive visualizations with insights')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-chart-bar mr-1.5 text-xs"></i>Data analysis</button>
+                            <button onclick="quickAction('Write a comprehensive technical blog post about building scalable microservices')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-pen-fancy mr-1.5 text-xs"></i>Writing</button>
+                            <button onclick="quickAction('Create a complete marketing strategy with channels, budget, and timeline')" class="px-4 py-2 rounded-full bg-manus-surface border border-manus-border hover:border-manus-accent/40 text-sm text-manus-text-muted hover:text-manus-text transition-all duration-200"><i class="fas fa-bullhorn mr-1.5 text-xs"></i>Marketing</button>
+                        </div>
+                        <!-- Agent mode hint -->
+                        <div class="mt-8 flex items-center justify-center gap-2 text-xs text-manus-text-dim">
+                            <i class="fas fa-wand-magic-sparkles text-manus-accent/50"></i>
+                            <span>Enable <button onclick="document.getElementById('agent-mode-toggle').click()" class="text-manus-accent hover:underline">Agent Mode</button> for deep autonomous execution</span>
                         </div>
                     </div>
                 </div>
@@ -1053,6 +1088,68 @@ app.get('/', (c) => {
         </main>
     </div>
 
+    <!-- Notification Panel (slides out from right) -->
+    <div id="notification-panel" class="hidden fixed top-14 right-4 w-80 max-h-[60vh] bg-manus-surface border border-manus-border rounded-2xl shadow-2xl z-50 overflow-hidden animate-in">
+        <div class="p-4 border-b border-manus-border flex items-center justify-between">
+            <div class="flex items-center gap-2"><i class="fas fa-bell text-manus-accent text-sm"></i><span class="text-sm font-semibold">Notifications</span></div>
+            <button onclick="clearNotifications()" class="text-xs text-manus-text-dim hover:text-manus-text transition-colors">Clear all</button>
+        </div>
+        <div id="notification-list" class="overflow-y-auto max-h-[50vh] p-2">
+            <div class="px-3 py-6 text-center text-manus-text-dim text-xs"><i class="fas fa-check-circle text-lg mb-2 block opacity-30"></i>No new notifications</div>
+        </div>
+    </div>
+
+    <!-- Slide Preview Modal -->
+    <div id="slide-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeSlidePreview()"></div>
+        <div class="relative w-[90vw] max-w-[1100px] h-[80vh] bg-manus-surface rounded-2xl border border-manus-border shadow-2xl flex flex-col overflow-hidden animate-in">
+            <div class="h-12 px-4 flex items-center justify-between border-b border-manus-border flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-file-powerpoint text-orange-400 text-sm"></i>
+                    <span class="text-sm font-medium" id="slide-preview-title">Presentation Preview</span>
+                    <span class="text-xs text-manus-text-dim" id="slide-counter">Slide 1 / 1</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="prevSlide()" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-muted transition-colors"><i class="fas fa-chevron-left text-sm"></i></button>
+                    <button onclick="nextSlide()" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-muted transition-colors"><i class="fas fa-chevron-right text-sm"></i></button>
+                    <button onclick="closeSlidePreview()" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-dim hover:text-manus-text transition-colors ml-2"><i class="fas fa-xmark text-sm"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 flex items-center justify-center p-6 bg-[#0d0d0d]" id="slide-viewport">
+                <div id="slide-content" class="w-full max-w-[960px] aspect-[16/9] bg-gradient-to-br from-[#1a1a2e] to-[#16213e] rounded-xl shadow-2xl flex items-center justify-center p-12 text-white"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web Preview Modal -->
+    <div id="web-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeWebPreview()"></div>
+        <div class="relative w-[90vw] max-w-[1100px] h-[85vh] bg-manus-surface rounded-2xl border border-manus-border shadow-2xl flex flex-col overflow-hidden animate-in">
+            <div class="h-12 px-4 flex items-center justify-between border-b border-manus-border flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="flex gap-1.5">
+                        <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-amber-400/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-manus-surface2 border border-manus-border text-xs text-manus-text-dim flex-1 max-w-sm">
+                        <i class="fas fa-lock text-green-400 text-[9px]"></i>
+                        <span id="web-preview-url">preview://localhost</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleWebPreviewDevice('desktop')" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-muted transition-colors" title="Desktop"><i class="fas fa-desktop text-sm"></i></button>
+                    <button onclick="toggleWebPreviewDevice('mobile')" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-muted transition-colors" title="Mobile"><i class="fas fa-mobile-screen text-sm"></i></button>
+                    <button onclick="copyWebPreviewCode()" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-muted transition-colors" title="Copy code"><i class="fas fa-code text-sm"></i></button>
+                    <button onclick="closeWebPreview()" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-dim hover:text-manus-text transition-colors ml-2"><i class="fas fa-xmark text-sm"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 bg-white flex items-start justify-center p-0 overflow-hidden" id="web-preview-container">
+                <iframe id="web-preview-frame" class="w-full h-full border-0" sandbox="allow-scripts allow-same-origin"></iframe>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeSettings()"></div>
@@ -1066,8 +1163,9 @@ app.get('/', (c) => {
                     <button onclick="showSettingsTab('account')" class="settings-tab-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors" data-tab="account"><i class="fas fa-user w-4 text-center text-manus-text-muted"></i><span>Account</span></button>
                     <button onclick="showSettingsTab('usage')" class="settings-tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors" data-tab="usage"><i class="fas fa-sparkles w-4 text-center text-manus-text-muted"></i><span>Usage</span></button>
                     <button onclick="showSettingsTab('billing')" class="settings-tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors" data-tab="billing"><i class="fas fa-credit-card w-4 text-center text-manus-text-muted"></i><span>Billing</span></button>
+                    <button onclick="showSettingsTab('tasks')" class="settings-tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors" data-tab="tasks"><i class="fas fa-list-check w-4 text-center text-manus-text-muted"></i><span>Tasks</span></button>
                     <button onclick="showSettingsTab('general')" class="settings-tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors" data-tab="general"><i class="fas fa-sliders w-4 text-center text-manus-text-muted"></i><span>General</span></button>
-                    <button onclick="window.open('mailto:support@manus.im')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-manus-text-muted hover:bg-manus-surface3 transition-colors"><i class="fas fa-envelope w-4 text-center"></i><span>Contact us</span><i class="fas fa-arrow-up-right-from-square text-[10px] ml-auto"></i></button>
+                    <button onclick="window.open('/docs')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-manus-text-muted hover:bg-manus-surface3 transition-colors"><i class="fas fa-book w-4 text-center"></i><span>Docs</span><i class="fas fa-arrow-up-right-from-square text-[10px] ml-auto"></i></button>
                 </nav>
             </div>
             <div class="flex-1 p-6 overflow-y-auto relative">
@@ -1117,7 +1215,7 @@ app.get('/', (c) => {
                         </div>
                         <div class="border-t border-dashed border-manus-border pt-4">
                             <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center gap-2 text-sm text-manus-text-muted"><i class="fas fa-sparkles text-manus-accent"></i>Credits<span class="w-4 h-4 rounded-full border border-manus-text-dim flex items-center justify-center text-[10px] cursor-help" title="Credits are consumed when you use AI features. Standard costs 15, Pro costs 45, Lite costs 8 per message.">?</span></div>
+                                <div class="flex items-center gap-2 text-sm text-manus-text-muted"><i class="fas fa-sparkles text-manus-accent"></i>Credits<span class="w-4 h-4 rounded-full border border-manus-text-dim flex items-center justify-center text-[10px] cursor-help" title="Credits are consumed when you use AI features.">?</span></div>
                                 <span class="text-2xl font-bold" id="credit-balance">1000</span>
                             </div>
                             <div class="w-full h-2 bg-manus-surface3 rounded-full overflow-hidden">
@@ -1127,9 +1225,9 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-3 mb-6">
-                        <div class="p-3 bg-manus-surface2 rounded-xl border border-manus-border text-center"><div class="text-lg mb-1">\u26A1</div><div class="text-xs font-medium">Standard</div><div class="text-xs text-manus-accent mt-1">15 credits/msg</div></div>
-                        <div class="p-3 bg-manus-surface2 rounded-xl border border-manus-border text-center"><div class="text-lg mb-1">\uD83E\uDDE0</div><div class="text-xs font-medium">Pro</div><div class="text-xs text-manus-accent mt-1">45 credits/msg</div></div>
-                        <div class="p-3 bg-manus-surface2 rounded-xl border border-manus-border text-center"><div class="text-lg mb-1">\uD83D\uDCA8</div><div class="text-xs font-medium">Lite</div><div class="text-xs text-manus-accent mt-1">8 credits/msg</div></div>
+                        <div class="p-3 bg-manus-surface2 rounded-xl border border-manus-border text-center"><div class="text-lg mb-1">\u26A1</div><div class="text-xs font-medium">Standard</div><div class="text-xs text-manus-accent mt-1">15 cr/msg</div></div>
+                        <div class="p-3 bg-manus-surface2 rounded-xl border border-manus-border text-center"><div class="text-lg mb-1">\uD83E\uDDE0</div><div class="text-xs font-medium">Pro</div><div class="text-xs text-manus-accent mt-1">45 cr/msg</div></div>
+                        <div class="p-3 bg-manus-surface2 rounded-xl border border-manus-border text-center"><div class="text-lg mb-1">\uD83D\uDCA8</div><div class="text-xs font-medium">Lite</div><div class="text-xs text-manus-accent mt-1">8 cr/msg</div></div>
                     </div>
                     <div class="text-sm">
                         <div class="grid grid-cols-3 text-manus-text-dim pb-2 border-b border-manus-border"><span>Details</span><span>Date</span><span class="text-right">Credits</span></div>
@@ -1156,6 +1254,15 @@ app.get('/', (c) => {
                             <ul class="space-y-2 mb-5 text-sm"><li class="flex items-center gap-2"><i class="fas fa-check text-green-400 text-xs"></i>20,000 credits</li><li class="flex items-center gap-2"><i class="fas fa-check text-green-400 text-xs"></i>Pro model access</li><li class="flex items-center gap-2"><i class="fas fa-check text-green-400 text-xs"></i>Priority processing</li><li class="flex items-center gap-2"><i class="fas fa-check text-green-400 text-xs"></i>Chat history sync</li><li class="flex items-center gap-2"><i class="fas fa-check text-green-400 text-xs"></i>Priority support</li></ul>
                             <button onclick="handlePurchase('pro')" id="btn-pro" class="w-full py-2.5 rounded-xl bg-manus-accent hover:bg-manus-accent2 text-white text-sm font-medium transition-colors">Get Pro</button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Tab (NEW) -->
+                <div id="settings-tasks" class="settings-tab-content hidden">
+                    <h2 class="text-xl font-semibold mb-2">Agent Tasks</h2>
+                    <p class="text-sm text-manus-text-muted mb-6">Track autonomous task execution status.</p>
+                    <div id="tasks-list" class="space-y-3">
+                        <div class="px-4 py-8 text-center text-manus-text-dim text-xs"><i class="fas fa-list-check text-2xl mb-2 block opacity-30"></i>No tasks yet. Enable Agent Mode and send a request to start.</div>
                     </div>
                 </div>
 
