@@ -105,8 +105,20 @@ function setThinkingIndicatorState(state, statusText = '') {
 function finalizeThinkingIndicator() {
   const indicator = document.getElementById('thinking-indicator');
   if (!indicator) return;
+  const checklist = indicator.querySelectorAll('.task-checklist-item');
+  checklist.forEach(item => {
+    item.className = 'task-checklist-item completed';
+    const check = item.querySelector('.task-check');
+    const status = item.querySelector('.task-status');
+    if (check) check.innerHTML = '<i class="fas fa-check text-[8px]"></i>';
+    if (status) {
+      status.textContent = 'Done';
+      status.className = 'task-status success text-[10px]';
+    }
+  });
+  if (checklist.length) updateThinkingProgress(checklist.length, checklist.length);
   indicator.classList.add('is-complete');
-  setThinkingIndicatorState('complete', agentModeEnabled ? 'Task plan completed' : 'Execution trace completed');
+  setThinkingIndicatorState('complete', agentModeEnabled ? 'Task plan completed' : 'Response complete');
 }
 
 function updateAgentModeUI() {
@@ -706,7 +718,17 @@ function addCopyButtons(container) {
 // ============================================================
 // AGENT MODE: THINKING PROCESS UI
 // ============================================================
-function renderThinkingIndicator(taskSteps) {
+function getRequestLifecycleSteps(taskSteps = [], endpoint = '/api/chat') {
+  const primaryPlan = taskSteps?.[0]?.text || 'Analyze the latest message and prepare the execution strategy.';
+  return [
+    { id: 1, title: 'Planning', text: primaryPlan },
+    { id: 2, title: 'Executing', text: `Call ${endpoint} and wait for the first streamed byte from the backend.` },
+    { id: 3, title: 'Responding', text: 'Parse the live stream and render the answer chunk-by-chunk in the UI.' },
+    { id: 4, title: 'Complete', text: 'Finalize the response, persist the conversation, and close the execution trace.' }
+  ];
+}
+
+function renderThinkingIndicator(taskSteps, requestMeta = {}) {
   const area = document.getElementById('messages-area');
   if (!area) return null;
   const div = document.createElement('div');
@@ -715,23 +737,20 @@ function renderThinkingIndicator(taskSteps) {
 
   const isAgent = agentModeEnabled && taskSteps && taskSteps.length > 0;
   const panelClass = isAgent ? 'agent-execution-panel' : 'execution-panel';
-  const totalSteps = isAgent ? taskSteps.length : 4;
-  const initialProgress = isAgent ? 1 : 1;
+  const lifecycleSteps = getRequestLifecycleSteps(taskSteps, requestMeta.endpoint || '/api/chat');
+  const totalSteps = lifecycleSteps.length;
+  const initialProgress = 1;
 
-  let stepsHtml = '';
-  if (isAgent && taskSteps) {
-    stepsHtml = `<div class="task-checklist" id="task-checklist">
-      ${taskSteps.map((s, i) => `<div class="task-checklist-item ${i === 0 ? 'active' : ''}" data-step="${s.id}">
-        <div class="task-check">${i === 0 ? '<i class="fas fa-spinner fa-spin text-[8px]"></i>' : '<span class="text-[8px]">${s.id}</span>'}</div>
-        <span class="text-manus-text-muted flex-1">${s.text}</span>
-        <span class="task-status ${i === 0 ? 'executing' : 'pending'} text-[10px]">${i === 0 ? 'Running' : 'Pending'}</span>
-      </div>`).join('')}
-    </div>`;
-  } else {
-    stepsHtml = `<div class="execution-steps" id="execution-steps">
-      <div class="step-item agent-step"><div class="step-icon active"><i class="fas fa-circle text-[6px]"></i></div><span class="text-manus-text-muted">Analyzing your request...</span></div>
-    </div>`;
-  }
+  const stepsHtml = `<div class="task-checklist" id="task-checklist">
+    ${lifecycleSteps.map((step, i) => `<div class="task-checklist-item ${i === 0 ? 'active' : ''}" data-step="${step.id}" data-title="${escapeHtml(step.title)}">
+      <div class="task-check">${i === 0 ? '<i class="fas fa-spinner fa-spin text-[8px]"></i>' : `<span class="text-[8px]">${step.id}</span>`}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70 mb-1">${escapeHtml(step.title)}</div>
+        <span class="text-manus-text-muted block">${escapeHtml(step.text)}</span>
+      </div>
+      <span class="task-status ${i === 0 ? 'executing' : 'pending'} text-[10px]">${i === 0 ? 'Running' : 'Pending'}</span>
+    </div>`).join('')}
+  </div>`;
 
   div.innerHTML = `<div class="flex gap-3">
     <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center mt-1">
@@ -747,7 +766,7 @@ function renderThinkingIndicator(taskSteps) {
             </div>
             <div class="execution-status-row">
               <div class="agent-spinner w-4 h-4 border-2 border-manus-accent/30 border-t-manus-accent rounded-full"></div>
-              <span class="text-xs font-medium text-manus-text-muted" id="thinking-status">${isAgent ? 'Executing task plan...' : 'Working on your task...'}</span>
+              <span class="text-xs font-medium text-manus-text-muted" id="thinking-status">Planning request and preparing backend execution...</span>
             </div>
           </div>
         </div>
@@ -756,20 +775,23 @@ function renderThinkingIndicator(taskSteps) {
       </div>
     </div></div>`;
   area.appendChild(div);
-  div.dataset.phase = 'executing';
+  div.dataset.phase = 'planning';
   div.dataset.totalSteps = totalSteps;
   scrollToBottom();
   return div;
 }
 
-function advanceAgentStep(stepId) {
+function advanceAgentStep(stepId, options = {}) {
   const checklist = document.getElementById('task-checklist');
   if (!checklist) return;
-  const items = checklist.querySelectorAll('.task-checklist-item');
+  const items = [...checklist.querySelectorAll('.task-checklist-item')];
+  const activeLabel = options.activeLabel || 'Running';
   items.forEach(item => {
-    const sid = parseInt(item.dataset.step);
+    const sid = parseInt(item.dataset.step, 10);
     const check = item.querySelector('.task-check');
     const status = item.querySelector('.task-status');
+    if (!check || !status) return;
+
     if (sid < stepId) {
       item.className = 'task-checklist-item completed';
       check.innerHTML = '<i class="fas fa-check text-[8px]"></i>';
@@ -778,44 +800,30 @@ function advanceAgentStep(stepId) {
     } else if (sid === stepId) {
       item.className = 'task-checklist-item active';
       check.innerHTML = '<i class="fas fa-spinner fa-spin text-[8px]"></i>';
-      status.textContent = 'Running';
+      status.textContent = activeLabel;
       status.className = 'task-status executing text-[10px]';
+    } else {
+      item.className = 'task-checklist-item';
+      check.innerHTML = `<span class="text-[8px]">${sid}</span>`;
+      status.textContent = 'Pending';
+      status.className = 'task-status pending text-[10px]';
     }
   });
   updateThinkingProgress(stepId, items.length);
+  if (options.phase || options.statusText) setThinkingIndicatorState(options.phase || 'executing', options.statusText || '');
   scrollToBottom();
 }
 
-function completeAllAgentSteps() {
-  const checklist = document.getElementById('task-checklist');
-  if (!checklist) return;
-  checklist.querySelectorAll('.task-checklist-item').forEach(item => {
-    item.className = 'task-checklist-item completed';
-    const check = item.querySelector('.task-check');
-    const status = item.querySelector('.task-status');
-    check.innerHTML = '<i class="fas fa-check text-[8px]"></i>';
-    status.textContent = 'Done';
-    status.className = 'task-status success text-[10px]';
-  });
-  updateThinkingProgress(checklist.querySelectorAll('.task-checklist-item').length, checklist.querySelectorAll('.task-checklist-item').length);
-  setThinkingIndicatorState('responding', 'All steps completed. Drafting final response...');
+function completeAllAgentSteps(statusText = 'Task plan completed') {
+  finalizeThinkingIndicator();
+  if (statusText) setThinkingIndicatorState('complete', statusText);
 }
 
 function addExecutionStep(text, status = 'active') {
-  const steps = document.getElementById('execution-steps');
-  if (!steps) return;
-  steps.querySelectorAll('.step-icon.active').forEach(icon => {
-    icon.className = 'step-icon completed';
-    icon.innerHTML = '<i class="fas fa-check text-[8px]"></i>';
-  });
-  const step = document.createElement('div');
-  step.className = 'step-item agent-step';
-  const iconClass = status === 'completed' ? 'completed' : 'active';
-  const iconContent = status === 'completed' ? '<i class="fas fa-check text-[8px]"></i>' : '<i class="fas fa-circle text-[6px]"></i>';
-  step.innerHTML = `<div class="step-icon ${iconClass}">${iconContent}</div><span class="text-manus-text-muted">${text}</span>`;
-  steps.appendChild(step);
-  updateThinkingProgress(steps.children.length, parseInt(document.getElementById('thinking-indicator')?.dataset.totalSteps || '4', 10));
-  steps.scrollTop = steps.scrollHeight;
+  const indicator = document.getElementById('thinking-indicator');
+  if (!indicator) return;
+  const nextStep = Math.min((parseInt(document.getElementById('thinking-progress-meta')?.textContent?.split('/')[0] || '1', 10) || 1) + 1, parseInt(indicator.dataset.totalSteps || '4', 10));
+  advanceAgentStep(nextStep, { phase: status === 'completed' ? 'complete' : 'executing', statusText: text, activeLabel: status === 'completed' ? 'Done' : 'Running' });
 }
 
 function removeThinkingIndicator() {
@@ -1100,31 +1108,23 @@ async function sendMessage() {
     agentTasks.unshift(task);
   }
 
-  const thinkingEl = renderThinkingIndicator(taskSteps);
-
-  // Step animation
-  let stepIndex = 0;
-  let stepInterval;
-  if (agentModeEnabled && taskSteps) {
-    stepInterval = setInterval(() => {
-      stepIndex++;
-      if (stepIndex < taskSteps.length) advanceAgentStep(taskSteps[stepIndex].id);
-      else clearInterval(stepInterval);
-    }, 1200);
-  } else {
-    const defaultSteps = ['Understanding task context...', 'Planning execution steps...', 'Generating response...'];
-    stepInterval = setInterval(() => {
-      if (stepIndex < defaultSteps.length) { addExecutionStep(defaultSteps[stepIndex]); stepIndex++; }
-    }, 800);
-  }
+  const backendEndpoint = '/api/chat';
+  renderThinkingIndicator(taskSteps, { endpoint: backendEndpoint });
 
   try {
-    const response = await fetch('/api/chat', {
+    const requestPayload = { messages: currentMessages.map(m => ({ role: m.role, content: m.content })), model: selectedModel, credits };
+    const responsePromise = fetch(backendEndpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: currentMessages.map(m => ({ role: m.role, content: m.content })), model: selectedModel, credits })
+      body: JSON.stringify(requestPayload)
     });
 
-    clearInterval(stepInterval);
+    advanceAgentStep(2, {
+      phase: 'executing',
+      statusText: `Calling ${backendEndpoint} and waiting for the first streamed byte...`,
+      activeLabel: 'Waiting'
+    });
+
+    const response = await responsePromise;
 
     if (!response.ok) {
       let errorData = {};
@@ -1156,30 +1156,72 @@ async function sendMessage() {
       if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
     }
 
-    if (agentModeEnabled && taskSteps) completeAllAgentSteps();
-    else {
-      addExecutionStep('Drafting final response...', 'completed');
-      setThinkingIndicatorState('responding', 'Drafting final response...');
-    }
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('Streaming response unavailable.');
 
-    await sleep(320);
-    renderStreamingMessage();
-
-    const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullContent = '';
+    let hasStartedStreaming = false;
+    let streamBuffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      if (chunk.includes('[DONE]')) break;
-      fullContent += chunk;
-      updateStreamingContent(fullContent);
+
+      streamBuffer += decoder.decode(value, { stream: true });
+      if (!streamBuffer) continue;
+
+      if (!hasStartedStreaming) {
+        hasStartedStreaming = true;
+        advanceAgentStep(3, {
+          phase: wasFallback && modelUsed === 'local-fallback' ? 'fallback' : 'responding',
+          statusText: wasFallback && modelUsed === 'local-fallback'
+            ? 'Streaming locally generated response in real time...'
+            : 'Streaming response in real time...',
+          activeLabel: 'Streaming'
+        });
+        renderStreamingMessage();
+      }
+
+      const doneIndex = streamBuffer.indexOf('[DONE]');
+      if (doneIndex >= 0) {
+        const finalChunk = streamBuffer.slice(0, doneIndex);
+        if (finalChunk) {
+          fullContent += finalChunk;
+          updateStreamingContent(fullContent);
+        }
+        streamBuffer = '';
+        break;
+      }
+
+      const flushableLength = Math.max(streamBuffer.length - 6, 0);
+      if (flushableLength > 0) {
+        fullContent += streamBuffer.slice(0, flushableLength);
+        streamBuffer = streamBuffer.slice(flushableLength);
+        updateStreamingContent(fullContent);
+      }
+    }
+
+    if (!hasStartedStreaming) {
+      advanceAgentStep(3, {
+        phase: wasFallback && modelUsed === 'local-fallback' ? 'fallback' : 'responding',
+        statusText: 'Finalizing empty stream response...',
+        activeLabel: 'Streaming'
+      });
+      renderStreamingMessage();
+    }
+
+    streamBuffer += decoder.decode();
+    if (streamBuffer) {
+      const safeTail = streamBuffer.replace(/\[DONE\]/g, '');
+      if (safeTail) {
+        fullContent += safeTail;
+        updateStreamingContent(fullContent);
+      }
     }
 
     finalizeStreamingMessage(fullContent);
-    finalizeThinkingIndicator();
+    completeAllAgentSteps(agentModeEnabled ? 'Task plan completed' : 'Response complete');
     currentMessages.push({ role: 'assistant', content: fullContent });
     if (conv) { conv.messages = [...currentMessages]; conv.updatedAt = new Date().toISOString(); saveConversations(); }
     deductCredits(modelUsed === 'local-fallback' ? 'gpt-5-nano' : modelUsed, text);
@@ -1191,7 +1233,6 @@ async function sendMessage() {
     }
 
   } catch (error) {
-    clearInterval(stepInterval);
     removeThinkingIndicator();
     consecutiveAPIFailures++;
     renderErrorMessage('generic', error.message);
@@ -1330,7 +1371,6 @@ function scrollToBottom() {
   const container = document.getElementById('chat-container');
   if (container) requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
 }
-function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
