@@ -1,4 +1,4 @@
-# Manus AI - Autonomous Agentic System
+# General Boss AI - Autonomous Agentic System
 
 An autonomous AI agent that evolves from chat assistant to task execution engine. Features a 6-layer architecture with dark-mode Manus-style UI, streaming AI responses, Supabase persistence, and multimodal output rendering.
 
