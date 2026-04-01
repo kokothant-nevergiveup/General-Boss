@@ -1,6 +1,6 @@
 # General Boss AI - Autonomous Agentic System
 
-An autonomous AI agent that evolves from chat assistant to task execution engine. Features a 6-layer architecture with dark-mode Manus-style UI, streaming AI responses, Supabase persistence, and multimodal output rendering.
+An autonomous AI agent that evolves from chat assistant to task execution engine. Features a 6-layer architecture with a dark-mode General Boss aesthetic, streaming AI responses, Supabase persistence, and multimodal output rendering.
 
 ## Live Demo
 - **App**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai
@@ -14,7 +14,7 @@ Phase 4 transforms the chat-based assistant into an **Agentic Execution System**
 1. **Agentic Planning (L4)** - Task decomposition engine, real-time "Thinking Process" UI panel, Agent Mode toggle for deep execution tasks
 2. **Multimodal Output Rendering (L5)** - Slides Generator (Markdown-to-slide with 16:9 preview), Web Designer (HTML preview with sandbox iframe + device toggle)
 3. **Asynchronous Task Tracking (L2 & L3)** - In-memory task state tracking (Pending/Executing/Success/Failed), notification system with bell + panel
-4. **Manus-Style UI/UX** - Landing page greeting "What can I do for you?", 4 quick-action cards + 4 secondary pills, dark-mode aesthetic, mobile responsiveness
+4. **General Boss UI/UX** - Landing page greeting "What can I do for you?", 4 quick-action cards + 4 secondary pills, dark-mode aesthetic, mobile responsiveness
 
 ### Phase 4 Features Completed
 - Landing page with animated robot icon and gradient heading
@@ -38,7 +38,7 @@ Phase 4 transforms the chat-based assistant into an **Agentic Execution System**
 | L2 | Data Persistence (Supabase) | 80% | PostgreSQL via PostgREST, task state tracking |
 | L3 | Credit & Payment System | 80% | Stripe + LemonSqueezy, demo mode, per-model costs |
 | L4 | AI Processing & Agentic Planning | 90% | Task decomposition, fallback chain, streaming SSE |
-| L5 | Frontend & Multimodal Output | 90% | Slides, Web Preview, Notifications, Manus UI |
+| L5 | Frontend & Multimodal Output | 90% | Slides, Web Preview, Notifications, General Boss UI |
 | L6 | Edge Deployment & DevOps | 70% | Cloudflare Pages, PM2, Wrangler CLI |
 
 ## Interactive Documentation
@@ -90,9 +90,9 @@ usage_history      - Credit usage tracking (user_id FK)
 
 | Model | Display Name | Cost/Message |
 |-------|-------------|--------------|
-| gpt-5-mini | Manus Standard | 15 credits |
-| gpt-5 | Manus Pro | 45 credits |
-| gpt-5-nano | Manus Lite | 8 credits |
+| gpt-5-mini | General Boss Standard | 15 credits |
+| gpt-5 | General Boss Pro | 45 credits |
+| gpt-5-nano | General Boss Lite | 8 credits |
 
 ### Plans
 - **Free**: 1,000 credits
@@ -180,12 +180,12 @@ npm run dev:sandbox
 ```bash
 # Production deployment to Cloudflare Pages
 npm run build
-npx wrangler pages deploy dist --project-name manus-ai
+npx wrangler pages deploy dist --project-name general-boss
 
 # Set production secrets
-npx wrangler pages secret put OPENAI_API_KEY --project-name manus-ai
-npx wrangler pages secret put SUPABASE_URL --project-name manus-ai
-npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai
+npx wrangler pages secret put OPENAI_API_KEY --project-name general-boss
+npx wrangler pages secret put SUPABASE_URL --project-name general-boss
+npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name general-boss
 ```
 
 ## What's Next (Pending)

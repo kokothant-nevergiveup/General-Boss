@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "manus-ai-clone",
+  "name": "general-boss",
   "compatibility_date": "2026-03-23",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
@@ -8,8 +8,8 @@
   ]
 
   // Supabase credentials: set as secrets in production
-  // npx wrangler pages secret put SUPABASE_URL --project-name manus-ai-clone
-  // npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name manus-ai-clone
-  // npx wrangler pages secret put STRIPE_SECRET_KEY --project-name manus-ai-clone
-  // npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name manus-ai-clone
+  // npx wrangler pages secret put SUPABASE_URL --project-name general-boss
+  // npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name general-boss
+  // npx wrangler pages secret put STRIPE_SECRET_KEY --project-name general-boss
+  // npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name general-boss
 }

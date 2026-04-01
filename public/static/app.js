@@ -1,5 +1,5 @@
 // ============================================================
-// Manus AI - Phase 4: Agentic Execution System Frontend
+// General Boss AI - Phase 4: Agentic Execution System Frontend
 // ============================================================
 // Architecture:
 // 1. Security: API keys NEVER in this file. All via /api/* proxy.
@@ -19,7 +19,9 @@ let selectedModel = 'gpt-5-mini';
 let credits = 1000;
 let totalCredits = 1000;
 let usageHistory = [];
-let userId = localStorage.getItem('manus_user_id') || generateUserId();
+const USER_ID_STORAGE_KEY = 'general_boss_user_id';
+const LEGACY_USER_ID_STORAGE_KEY = 'manus_user_id';
+let userId = getStoredUserId() || generateUserId();
 let dbAvailable = false;
 let consecutiveAPIFailures = 0;
 let dataLoaded = false;
@@ -40,9 +42,20 @@ let currentWebCode = '';
 // Credit cost per model
 const MODEL_COSTS = { 'gpt-5-mini': 15, 'gpt-5': 45, 'gpt-5-nano': 8 };
 
+function getStoredUserId() {
+  const current = localStorage.getItem(USER_ID_STORAGE_KEY);
+  if (current) return current;
+  const legacy = localStorage.getItem(LEGACY_USER_ID_STORAGE_KEY);
+  if (legacy) {
+    localStorage.setItem(USER_ID_STORAGE_KEY, legacy);
+    return legacy;
+  }
+  return null;
+}
+
 function generateUserId() {
   const id = 'user_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  localStorage.setItem('manus_user_id', id);
+  localStorage.setItem(USER_ID_STORAGE_KEY, id);
   return id;
 }
 
@@ -688,7 +701,7 @@ function renderMessage(role, content, animate = true) {
       <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center mt-1">
         <i class="fas fa-robot text-white text-xs"></i></div>
       <div class="flex-1 min-w-0">
-        <div class="text-xs text-manus-text-dim mb-1.5 font-medium">Manus</div>
+        <div class="text-xs text-manus-text-dim mb-1.5 font-medium">General Boss</div>
         <div class="markdown-body text-sm">${renderMarkdown(content)}</div></div></div>`;
   }
   area.appendChild(div);
@@ -756,7 +769,7 @@ function renderThinkingIndicator(taskSteps, requestMeta = {}) {
     <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center mt-1">
       <i class="fas fa-robot text-white text-xs"></i></div>
     <div class="flex-1">
-      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">Manus ${isAgent ? '<span class="text-manus-accent ml-1">Agent</span>' : ''}</div>
+      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">General Boss${isAgent ? ' <span class="text-manus-accent ml-1">Agent</span>' : ''}</div>
       <div class="${panelClass}">
         <div class="execution-header">
           <div class="execution-header-main">
@@ -841,7 +854,7 @@ function renderStreamingMessage() {
     <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center mt-1">
       <i class="fas fa-robot text-white text-xs"></i></div>
     <div class="flex-1 min-w-0">
-      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">Manus</div>
+      <div class="text-xs text-manus-text-dim mb-1.5 font-medium">General Boss</div>
       <div class="markdown-body text-sm" id="streaming-content"><span class="typing-cursor"></span></div></div></div>`;
   area.appendChild(div);
   scrollToBottom();

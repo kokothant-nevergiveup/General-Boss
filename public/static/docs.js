@@ -107,7 +107,7 @@ function renderOverview() {
         </div>
         <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
           <i class="fas fa-palette text-amber-400 text-lg mb-2"></i>
-          <div class="text-xs font-medium text-amber-300">Manus-Style UI</div>
+          <div class="text-xs font-medium text-amber-300">General Boss UI</div>
           <div class="text-[10px] text-gray-500 mt-1">Dark mode, quick actions, mobile</div>
         </div>
       </div>
@@ -133,7 +133,7 @@ function renderOverview() {
         'Task decomposition, thinking process UI, Agent Mode toggle, model fallback chain, streaming SSE',
         '90%')}
       ${renderLayerCard(5, 'Frontend & Multimodal Output', 'fa-desktop', 'text-cyan-400', 'bg-cyan-500/10',
-        'Slides generator, web designer preview, Manus-style landing, dark mode, notification system',
+        'Slides generator, web designer preview, General Boss landing, dark mode, notification system',
         '90%')}
       ${renderLayerCard(6, 'Edge Deployment & DevOps', 'fa-cloud', 'text-amber-400', 'bg-amber-500/10',
         'Cloudflare Pages/Workers, PM2 process management, Wrangler CLI, environment configuration',
@@ -170,7 +170,7 @@ function renderOverview() {
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Conversation CRUD with Supabase persistence</span></div>
         
         <div class="text-xs font-bold text-purple-400 uppercase mt-4 mb-2">Phase 4 (Agentic Execution)</div>
-        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Manus-style landing page ("What can I do for you?") with quick-action cards</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">General Boss landing page ("What can I do for you?") with quick-action cards</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Agent Mode toggle with task decomposition & thinking process UI</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Slides Generator: Markdown-to-slide with interactive preview modal</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Web Designer: HTML/CSS code preview with sandbox iframe & device toggle</span></div>
@@ -328,7 +328,7 @@ function renderPhase4() {
     <div class="doc-card p-6 bg-gradient-to-br from-purple-500/5 to-blue-500/5 border border-purple-500/20 rounded-2xl mb-6">
       <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
         <i class="fas fa-compass text-purple-400"></i>
-        System Vision ("General Boss" / Manus AI DNA)
+        System Vision ("General Boss" Product DNA)
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
         <div class="p-3 bg-[#141414] rounded-xl border border-[#2a2a2a]">
@@ -407,7 +407,7 @@ function renderPhase4() {
     </div>
     
     <div class="doc-card p-6 bg-[#141414] border border-[#2a2a2a] rounded-2xl mb-6">
-      <h3 class="text-sm font-semibold mb-4">4. UI/UX Refinement (Manus Style)</h3>
+      <h3 class="text-sm font-semibold mb-4">4. UI/UX Refinement (General Boss Style)</h3>
       <div class="space-y-3">
         ${reportItem('Landing Page Greeting', 'completed',
           'Full-screen landing with animated robot icon (float-animation), gradient heading "What can I do for you?", descriptive subtitle, and agent mode hint. Hidden when conversation starts.',
@@ -761,7 +761,7 @@ function renderLayer4() {
         ${reportItem('Streaming SSE', 'completed', 'Chat streams via SSE with delta content extraction.', 'src/index.tsx lines 618-668')}
         ${reportItem('Model Fallback', 'completed', 'X-Model-Used and X-Fallback headers inform client.', 'src/index.tsx lines 547-614')}
         ${reportItem('Smart Offline Generator', 'completed', 'Keyword-matched markdown for common queries.', 'src/index.tsx lines 549-565')}
-        ${reportItem('Manus AI System Prompt', 'completed', 'Step-by-step reasoning with task execution persona.', 'src/index.tsx line 601')}
+        ${reportItem('General Boss AI System Prompt', 'completed', 'Step-by-step reasoning with task execution persona.', 'src/index.tsx line 601')}
       </div>
     </div>
     
@@ -789,9 +789,9 @@ function renderLayer5() {
         </div>
         Layer 5: Frontend & Multimodal Output
       </h1>
-      <p class="text-gray-400">Dark-mode SPA with multimodal rendering, notifications, and Manus-style UX</p>
+      <p class="text-gray-400">Dark-mode SPA with multimodal rendering, notifications, and General Boss UX</p>
       <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-[10px] text-purple-300">
-        <i class="fas fa-bolt text-[8px]"></i> Phase 4: + Slides, Web Preview, Notifications, Manus UI
+        <i class="fas fa-bolt text-[8px]"></i> Phase 4: + Slides, Web Preview, Notifications, General Boss UI
       </div>
     </div>
     
@@ -870,7 +870,7 @@ function renderLayer5() {
     
     ${renderImplementationPlan('Layer 5', [
       { step: 1, title: 'HTML Shell', status: 'done', desc: 'SPA shell with all Phase 4 components.' },
-      { step: 2, title: 'Tailwind + Custom CSS', status: 'done', desc: 'Manus theme + agent effects + multimodal styles.' },
+      { step: 2, title: 'Tailwind + Custom CSS', status: 'done', desc: 'General Boss theme + agent effects + multimodal styles.' },
       { step: 3, title: 'Landing Page (Phase 4)', status: 'done', desc: 'Greeting + quick-action cards + agent hint.' },
       { step: 4, title: 'Slides Generator (Phase 4)', status: 'done', desc: 'Detection, parsing, preview modal.' },
       { step: 5, title: 'Web Preview (Phase 4)', status: 'done', desc: 'Detection, iframe sandbox, device toggle.' },
@@ -1075,7 +1075,7 @@ function renderImplementation() {
         Phase 4: Agentic Execution System (Current)
       </h3>
       <div class="space-y-3">
-        ${phaseStep('4.1', 'Manus-Style Landing Page', 'done', '"What can I do for you?" + quick-action cards.')}
+        ${phaseStep('4.1', 'General Boss Landing Page', 'done', '"What can I do for you?" + quick-action cards.')}
         ${phaseStep('4.2', 'Agent Mode Toggle', 'done', 'Sidebar switch + header badge + glow effects.')}
         ${phaseStep('4.3', 'Task Decomposition Engine', 'done', 'Context-aware step generation for 5 task types.')}
         ${phaseStep('4.4', 'Thinking Process UI', 'done', 'Real-time execution panel with step progression.')}
@@ -1213,7 +1213,7 @@ function renderStatus() {
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Web Designer with sandbox preview</span></div>
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Notification system (bell + panel)</span></div>
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Tasks tab in Settings</span></div>
-        <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Dark-mode Manus aesthetic</span></div>
+        <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Dark-mode General Boss aesthetic</span></div>
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Mobile responsiveness</span></div>
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Documentation updated (this page)</span></div>
         <div class="flex items-center gap-2 p-2 bg-amber-500/5 rounded-lg"><i class="fas fa-spinner fa-spin text-amber-400 text-sm"></i><span class="text-xs">File-to-Web transform</span></div>

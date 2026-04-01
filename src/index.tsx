@@ -598,7 +598,7 @@ app.post('/api/chat', async (c) => {
   const baseUrl = c.env?.OPENAI_BASE_URL || 'https://www.genspark.ai/api/llm_proxy/v1'
   const lastMessage = sanitizedMessages[sanitizedMessages.length - 1]?.content || ''
 
-  const systemPrompt = `You are Manus AI, an advanced autonomous AI agent. You help users by executing tasks, automating workflows, and delivering complete solutions.\n\nKey behaviors:\n- Think step-by-step and show your reasoning process\n- Help with: creating slides, building websites, developing apps, design, research, data analysis, writing, and more\n- Provide detailed, actionable responses\n- Use markdown formatting for clarity\n- When given a complex task, break it into steps and explain your approach\n- Be proactive and suggest improvements\n- Format code blocks with proper syntax highlighting`
+  const systemPrompt = `You are General Boss AI, an advanced autonomous AI agent. You help users by executing tasks, automating workflows, and delivering complete solutions.\n\nKey behaviors:\n- Think step-by-step and show your reasoning process\n- Help with: creating slides, building websites, developing apps, design, research, data analysis, writing, and more\n- Provide detailed, actionable responses\n- Use markdown formatting for clarity\n- When given a complex task, break it into steps and explain your approach\n- Be proactive and suggest improvements\n- Format code blocks with proper syntax highlighting`
 
   let usedModel = requestedModel
   let apiResponse: Response | null = null
@@ -671,9 +671,9 @@ app.post('/api/chat', async (c) => {
 app.get('/api/models', (c) => {
   return c.json({
     models: [
-      { id: 'gpt-5-mini', name: 'Manus Standard', description: 'Fast and efficient', icon: '\u26A1', creditCost: 15 },
-      { id: 'gpt-5', name: 'Manus Pro', description: 'Advanced reasoning', icon: '\uD83E\uDDE0', creditCost: 45 },
-      { id: 'gpt-5-nano', name: 'Manus Lite', description: 'Quick responses', icon: '\uD83D\uDCA8', creditCost: 8 },
+      { id: 'gpt-5-mini', name: 'General Boss Standard', description: 'Fast and efficient', icon: '\u26A1', creditCost: 15 },
+      { id: 'gpt-5', name: 'General Boss Pro', description: 'Advanced reasoning', icon: '\uD83E\uDDE0', creditCost: 45 },
+      { id: 'gpt-5-nano', name: 'General Boss Lite', description: 'Quick responses', icon: '\uD83D\uDCA8', creditCost: 8 },
     ]
   })
 })
@@ -702,8 +702,8 @@ app.get('/docs', (c) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autonomous Agentic System - Documentation</title>
-    <meta name="description" content="Layer architecture, reports, process diagrams, and implementation plans for the Autonomous Agentic System">
+    <title>General Boss - Documentation</title>
+    <meta name="description" content="Layer architecture, reports, process diagrams, and implementation plans for General Boss.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -740,9 +740,9 @@ app.get('/docs', (c) => {
                     <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
                         <i class="fas fa-robot text-white text-xs"></i>
                     </div>
-                    <span class="text-sm font-semibold tracking-tight">manus</span>
+                    <span class="text-sm font-semibold tracking-tight">General Boss</span>
                 </a>
-                <div class="text-xs text-gray-400 font-medium">AUTONOMOUS AGENTIC SYSTEM</div>
+                <div class="text-xs text-gray-400 font-medium">GENERAL BOSS PLATFORM</div>
                 <div class="text-[10px] text-gray-600">Documentation & Reports</div>
             </div>
             <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
@@ -821,8 +821,8 @@ app.get('/', (c) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manus AI</title>
-    <meta name="description" content="Manus AI - Your autonomous AI agent. From idea to execution while you rest.">
+    <title>General Boss AI</title>
+    <meta name="description" content="General Boss AI - Your autonomous AI execution partner. From idea to execution while you focus on what matters.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -859,7 +859,7 @@ app.get('/', (c) => {
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center">
                         <i class="fas fa-robot text-white text-sm"></i>
                     </div>
-                    <span class="text-lg font-semibold tracking-tight">manus</span>
+                    <span class="text-lg font-semibold tracking-tight">General Boss</span>
                 </div>
                 <button onclick="toggleSidebar()" class="p-1.5 rounded-lg hover:bg-manus-surface3 text-manus-text-muted transition-colors">
                     <i class="fas fa-bars text-sm"></i>
@@ -951,17 +951,17 @@ app.get('/', (c) => {
                         <div id="model-dropdown" class="hidden absolute right-0 top-full mt-2 w-64 bg-manus-surface border border-manus-border rounded-xl shadow-2xl py-2 z-50">
                             <div onclick="selectModel('gpt-5-mini', 'Standard', '\u26A1')" class="flex items-center gap-3 px-4 py-2.5 hover:bg-manus-surface2 cursor-pointer transition-colors">
                                 <span class="text-lg">\u26A1</span>
-                                <div class="flex-1"><div class="text-sm font-medium">Manus Standard</div><div class="text-xs text-manus-text-dim">Fast and efficient</div></div>
+                                <div class="flex-1"><div class="text-sm font-medium">General Boss Standard</div><div class="text-xs text-manus-text-dim">Fast and efficient</div></div>
                                 <span class="text-[10px] text-manus-text-dim">15 cr</span>
                             </div>
                             <div onclick="selectModel('gpt-5', 'Pro', '\uD83E\uDDE0')" class="flex items-center gap-3 px-4 py-2.5 hover:bg-manus-surface2 cursor-pointer transition-colors">
                                 <span class="text-lg">\uD83E\uDDE0</span>
-                                <div class="flex-1"><div class="text-sm font-medium">Manus Pro</div><div class="text-xs text-manus-text-dim">Advanced reasoning</div></div>
+                                <div class="flex-1"><div class="text-sm font-medium">General Boss Pro</div><div class="text-xs text-manus-text-dim">Advanced reasoning</div></div>
                                 <span class="text-[10px] text-manus-text-dim">45 cr</span>
                             </div>
                             <div onclick="selectModel('gpt-5-nano', 'Lite', '\uD83D\uDCA8')" class="flex items-center gap-3 px-4 py-2.5 hover:bg-manus-surface2 cursor-pointer transition-colors">
                                 <span class="text-lg">\uD83D\uDCA8</span>
-                                <div class="flex-1"><div class="text-sm font-medium">Manus Lite</div><div class="text-xs text-manus-text-dim">Quick responses</div></div>
+                                <div class="flex-1"><div class="text-sm font-medium">General Boss Lite</div><div class="text-xs text-manus-text-dim">Quick responses</div></div>
                                 <span class="text-[10px] text-manus-text-dim">8 cr</span>
                             </div>
                         </div>
@@ -973,7 +973,7 @@ app.get('/', (c) => {
             </header>
 
             <div id="chat-container" class="flex-1 overflow-y-auto">
-                <!-- LANDING PAGE - Manus Style -->
+                <!-- LANDING PAGE - General Boss Style -->
                 <div id="landing-page" class="flex flex-col items-center justify-center h-full px-4">
                     <div class="max-w-2xl w-full text-center">
                         <div class="mb-8 relative">
@@ -1046,7 +1046,7 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     <div class="text-center mt-2.5">
-                        <span class="text-[11px] text-manus-text-dim">Manus AI can make mistakes. Verify important information.</span>
+                        <span class="text-[11px] text-manus-text-dim">General Boss AI can make mistakes. Verify important information.</span>
                     </div>
                 </div>
             </div>
@@ -1058,7 +1058,7 @@ app.get('/', (c) => {
                         <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center"><i class="fas fa-circle-exclamation text-red-400 text-xl"></i></div>
                         <div><div class="font-semibold">Credits Exhausted</div><div class="text-xs text-manus-text-muted">You've used all your available credits</div></div>
                     </div>
-                    <p class="text-sm text-manus-text-muted mb-5">Upgrade your plan to continue using Manus AI with full capabilities. Your chat history is safely saved.</p>
+                    <p class="text-sm text-manus-text-muted mb-5">Upgrade your plan to continue using General Boss AI with full capabilities. Your chat history is safely saved.</p>
                     <div class="flex gap-3">
                         <button onclick="openSettings(); showSettingsTab('billing')" class="flex-1 px-4 py-2.5 rounded-xl bg-manus-accent hover:bg-manus-accent2 text-white text-sm font-medium transition-colors"><i class="fas fa-arrow-up-right mr-1.5"></i>Upgrade Plan</button>
                         <button onclick="dismissCreditsWarning()" class="px-4 py-2.5 rounded-xl border border-manus-border text-sm text-manus-text-muted hover:bg-manus-surface2 transition-colors">Dismiss</button>
@@ -1073,7 +1073,7 @@ app.get('/', (c) => {
                         <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center"><i class="fas fa-wifi text-amber-400 text-xl" id="api-error-icon"></i></div>
                         <div><div class="font-semibold" id="api-error-title">Service Unavailable</div><div class="text-xs text-manus-text-muted" id="api-error-subtitle">AI service is temporarily down</div></div>
                     </div>
-                    <p class="text-sm text-manus-text-muted mb-2" id="api-error-message">Manus AI is running in offline mode. You can still chat with limited capabilities using our built-in intelligence.</p>
+                    <p class="text-sm text-manus-text-muted mb-2" id="api-error-message">General Boss AI is running in offline mode. You can still chat with limited capabilities using our built-in intelligence.</p>
                     <div class="p-3 bg-amber-500/5 border border-amber-500/15 rounded-xl mb-5 text-xs text-amber-300/80">
                         <i class="fas fa-info-circle mr-1.5"></i>
                         <span>Offline mode uses the Lite model with reduced capabilities. Your messages and credits are unaffected.</span>
@@ -1157,7 +1157,7 @@ app.get('/', (c) => {
             <div class="w-[200px] bg-manus-surface2 border-r border-manus-border p-4 flex flex-col flex-shrink-0">
                 <div class="flex items-center gap-2.5 mb-6">
                     <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-manus-accent to-purple-600 flex items-center justify-center"><i class="fas fa-robot text-white text-xs"></i></div>
-                    <span class="text-sm font-semibold">manus</span>
+                    <span class="text-sm font-semibold">General Boss</span>
                 </div>
                 <nav class="space-y-1">
                     <button onclick="showSettingsTab('account')" class="settings-tab-btn active w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors" data-tab="account"><i class="fas fa-user w-4 text-center text-manus-text-muted"></i><span>Account</span></button>
