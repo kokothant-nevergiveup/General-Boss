@@ -1,0 +1,27 @@
+# ============================================================
+# General Boss - local development environment example
+# Copy to .dev.vars for Wrangler local development
+# ============================================================
+
+# Runtime mode
+APP_ENV=development
+ALLOWED_ORIGIN=http://127.0.0.1:3000
+
+# AI provider
+OPENAI_API_KEY=your-openai-compatible-api-key
+OPENAI_BASE_URL=https://www.genspark.ai/api/llm_proxy/v1
+
+# Supabase persistence
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-supabase-service-role-key
+
+# Stripe (optional until production checkout is enabled)
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_STARTER=
+STRIPE_PRICE_PRO=
+
+# LemonSqueezy (optional until production checkout is enabled)
+LEMONSQUEEZY_API_KEY=
+LEMONSQUEEZY_WEBHOOK_SECRET=
+LEMONSQUEEZY_STORE_ID=

@@ -9,6 +9,8 @@ type Bindings = {
   // --- 1. SECURITY: All keys stored as env vars / Cloudflare secrets ---
   OPENAI_API_KEY: string
   OPENAI_BASE_URL: string
+  APP_ENV?: string
+  ALLOWED_ORIGIN?: string
   // Payment (Stripe or LemonSqueezy)
   STRIPE_SECRET_KEY: string
   STRIPE_WEBHOOK_SECRET: string
@@ -27,9 +29,19 @@ type Bindings = {
 // ============================================================
 const app = new Hono<{ Bindings: Bindings }>()
 
+function getAppEnv(env?: Partial<Bindings>): 'development' | 'production' {
+  return env?.APP_ENV === 'production' ? 'production' : 'development'
+}
+
+function resolveCorsOrigin(requestOrigin: string | undefined, env?: Partial<Bindings>): string {
+  const configuredOrigin = env?.ALLOWED_ORIGIN?.trim()
+  if (!configuredOrigin) return requestOrigin || '*'
+  return requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin
+}
+
 // CORS for API routes only
 app.use('/api/*', cors({
-  origin: '*',
+  origin: (origin, c) => resolveCorsOrigin(origin, c.env),
   allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'X-Request-ID'],
   exposeHeaders: ['X-Model-Used', 'X-Fallback', 'X-RateLimit-Remaining'],
@@ -67,6 +79,44 @@ app.use('/api/*', async (c, next) => {
 function sanitize(text: string, maxLen = 10000): string {
   if (typeof text !== 'string') return ''
   return text.slice(0, maxLen).trim()
+}
+
+function normalizeTaskStatus(status: string): 'pending' | 'executing' | 'success' | 'failed' {
+  return ['pending', 'executing', 'success', 'failed'].includes(status)
+    ? status as 'pending' | 'executing' | 'success' | 'failed'
+    : 'pending'
+}
+
+function getHealthSnapshot(env?: Partial<Bindings>) {
+  const environment = getAppEnv(env)
+  const services = {
+    ai: !!env?.OPENAI_API_KEY,
+    database: !!(env?.SUPABASE_URL && env?.SUPABASE_SERVICE_KEY),
+    supabase: !!(env?.SUPABASE_URL && env?.SUPABASE_SERVICE_KEY),
+    stripe: !!env?.STRIPE_SECRET_KEY,
+    lemonsqueezy: !!env?.LEMONSQUEEZY_API_KEY
+  }
+  const missingRequired: string[] = []
+  if (!env?.OPENAI_API_KEY) missingRequired.push('OPENAI_API_KEY')
+  if (!env?.SUPABASE_URL) missingRequired.push('SUPABASE_URL')
+  if (!env?.SUPABASE_SERVICE_KEY) missingRequired.push('SUPABASE_SERVICE_KEY')
+
+  const warnings: string[] = []
+  if (environment === 'production' && !env?.ALLOWED_ORIGIN) {
+    warnings.push('ALLOWED_ORIGIN is not configured; API CORS will not be restricted to a single frontend origin.')
+  }
+  if (environment === 'production' && !env?.STRIPE_WEBHOOK_SECRET && !env?.LEMONSQUEEZY_WEBHOOK_SECRET) {
+    warnings.push('No payment webhook secret is configured; production payment verification is incomplete.')
+  }
+
+  return {
+    status: missingRequired.length === 0 ? 'ok' : 'degraded',
+    environment,
+    services,
+    productionReady: missingRequired.length === 0 && warnings.length === 0,
+    missingRequired,
+    warnings
+  }
 }
 
 // ============================================================
@@ -403,6 +453,89 @@ app.get('/api/db/settings/:userId', async (c) => {
   }
 })
 
+// --- DB: Agent task executions ---
+app.post('/api/db/tasks', async (c) => {
+  try {
+    const sbUrl = c.env.SUPABASE_URL
+    const sbKey = c.env.SUPABASE_SERVICE_KEY
+    if (!sbUrl || !sbKey) return c.json({ success: false, fallback: 'localStorage' })
+
+    const { userId, tasks } = await c.req.json()
+    const uid = sanitize(userId, 100)
+    if (!uid || !Array.isArray(tasks)) return c.json({ error: 'Missing fields' }, 400)
+    await ensureProfile(c.env, uid)
+
+    await supabase(c.env, 'task_executions', 'DELETE', null, `user_id=eq.${encodeURIComponent(uid)}`)
+
+    if (tasks.length > 0) {
+      const payload = tasks.slice(0, 100).map((task: any) => ({
+        id: sanitize(task.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, 100),
+        user_id: uid,
+        title: sanitize(task.title || 'Untitled task', 200),
+        status: normalizeTaskStatus(task.status || 'pending'),
+        steps: Array.isArray(task.steps) ? task.steps : [],
+        result: task.result && typeof task.result === 'object' ? task.result : {},
+        error: sanitize(task.error || '', 4000),
+        metadata: task.metadata && typeof task.metadata === 'object' ? task.metadata : {},
+        created_at: task.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+      await supabase(c.env, 'task_executions', 'POST', payload, '', { 'Prefer': 'return=minimal' })
+    }
+
+    return c.json({ success: true })
+  } catch (err: any) {
+    console.error('Save tasks error:', err.message)
+    return c.json({ error: err.message, fallback: 'localStorage' }, 500)
+  }
+})
+
+app.get('/api/db/tasks/:userId', async (c) => {
+  try {
+    const sbUrl = c.env.SUPABASE_URL
+    const sbKey = c.env.SUPABASE_SERVICE_KEY
+    if (!sbUrl || !sbKey) return c.json({ success: false, data: null, fallback: 'localStorage' })
+
+    const userId = sanitize(c.req.param('userId'), 100)
+    await ensureProfile(c.env, userId)
+
+    const rows = await supabase(c.env, 'task_executions', 'GET', null,
+      `user_id=eq.${encodeURIComponent(userId)}&order=updated_at.desc&limit=100`)
+
+    return c.json({
+      success: true,
+      data: (rows || []).map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        status: normalizeTaskStatus(task.status || 'pending'),
+        steps: Array.isArray(task.steps) ? task.steps : [],
+        result: task.result || {},
+        error: task.error || '',
+        metadata: task.metadata || {},
+        createdAt: task.created_at,
+        updatedAt: task.updated_at
+      }))
+    })
+  } catch (err: any) {
+    console.error('Load tasks error:', err.message)
+    return c.json({ error: err.message, data: null, fallback: 'localStorage' }, 500)
+  }
+})
+
+app.delete('/api/db/tasks/:taskId', async (c) => {
+  try {
+    const sbUrl = c.env.SUPABASE_URL
+    const sbKey = c.env.SUPABASE_SERVICE_KEY
+    if (!sbUrl || !sbKey) return c.json({ success: false, fallback: 'localStorage' })
+
+    const taskId = sanitize(c.req.param('taskId'), 100)
+    await supabase(c.env, 'task_executions', 'DELETE', null, `id=eq.${encodeURIComponent(taskId)}`)
+    return c.json({ success: true })
+  } catch (err: any) {
+    return c.json({ error: err.message, fallback: 'localStorage' }, 500)
+  }
+})
+
 // ============================================================
 // 3. REAL-WORLD CREDIT SYSTEM - Stripe + LemonSqueezy
 // ============================================================
@@ -680,16 +813,15 @@ app.get('/api/models', (c) => {
 
 // --- Health check ---
 app.get('/api/health', (c) => {
+  const snapshot = getHealthSnapshot(c.env)
   return c.json({
-    status: 'ok',
+    status: snapshot.status,
     timestamp: new Date().toISOString(),
-    services: {
-      ai: !!c.env?.OPENAI_API_KEY,
-      database: !!(c.env?.SUPABASE_URL && c.env?.SUPABASE_SERVICE_KEY),
-      supabase: !!(c.env?.SUPABASE_URL && c.env?.SUPABASE_SERVICE_KEY),
-      stripe: !!c.env?.STRIPE_SECRET_KEY,
-      lemonsqueezy: !!c.env?.LEMONSQUEEZY_API_KEY
-    }
+    environment: snapshot.environment,
+    productionReady: snapshot.productionReady,
+    services: snapshot.services,
+    missingRequired: snapshot.missingRequired,
+    warnings: snapshot.warnings
   })
 })
 

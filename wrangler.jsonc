@@ -7,9 +7,18 @@
     "nodejs_compat"
   ]
 
-  // Supabase credentials: set as secrets in production
+  // Production/runtime variables
+  // "vars": {
+  //   "APP_ENV": "production",
+  //   "ALLOWED_ORIGIN": "https://your-domain.example"
+  // }
+
+  // Secrets: configure with Wrangler or Cloudflare Pages dashboard
+  // npx wrangler pages secret put OPENAI_API_KEY --project-name general-boss
   // npx wrangler pages secret put SUPABASE_URL --project-name general-boss
   // npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name general-boss
   // npx wrangler pages secret put STRIPE_SECRET_KEY --project-name general-boss
   // npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name general-boss
+  // npx wrangler pages secret put LEMONSQUEEZY_API_KEY --project-name general-boss
+  // npx wrangler pages secret put LEMONSQUEEZY_WEBHOOK_SECRET --project-name general-boss
 }

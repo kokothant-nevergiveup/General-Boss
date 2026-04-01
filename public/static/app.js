@@ -348,20 +348,24 @@ async function loadAllFromDatabase() {
   if (!dbAvailable) return;
   try {
     updateSyncStatus('Loading data...');
-    const [convRes, profileRes] = await Promise.all([
+    const [convRes, profileRes, taskRes] = await Promise.all([
       fetch(`/api/db/conversations/${encodeURIComponent(userId)}`),
-      fetch(`/api/db/profile/${encodeURIComponent(userId)}`)
+      fetch(`/api/db/profile/${encodeURIComponent(userId)}`),
+      fetch(`/api/db/tasks/${encodeURIComponent(userId)}`)
     ]);
     const convData = await convRes.json();
     const profileData = await profileRes.json();
+    const taskData = await taskRes.json();
     if (convData.success && convData.data) conversations = convData.data;
     if (profileData.success && profileData.data) {
       credits = profileData.data.credits ?? 1000;
       totalCredits = profileData.data.totalCredits ?? 1000;
       if (profileData.data.usageHistory) usageHistory = profileData.data.usageHistory;
     }
+    if (taskData.success && taskData.data) agentTasks = taskData.data;
     dataLoaded = true;
     renderConversationList();
+    renderTasksList();
     updateAllCreditDisplays();
     checkCreditsStatus();
     updateSyncStatus('Synced');
@@ -419,6 +423,18 @@ async function saveConversationsToDB() {
   } catch (err) {
     console.warn('Failed to save conversations:', err.message);
     updateSyncStatus('Save failed');
+  }
+}
+
+async function saveTasksToDB() {
+  if (!dbAvailable) return;
+  try {
+    await fetch('/api/db/tasks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, tasks: agentTasks })
+    });
+  } catch (err) {
+    console.warn('Failed to save tasks:', err.message);
   }
 }
 
@@ -1108,17 +1124,22 @@ async function sendMessage() {
 
   // Agent mode: decompose task into steps
   let taskSteps = null;
+  let activeTask = null;
   if (agentModeEnabled) {
     taskSteps = decomposeTask(text);
     // Track in agentTasks
-    const task = {
+    activeTask = {
       id: Date.now().toString(),
       title: text.substring(0, 60),
       status: 'executing',
       steps: taskSteps,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      result: {}
     };
-    agentTasks.unshift(task);
+    agentTasks.unshift(activeTask);
+    renderTasksList();
+    saveTasksToDB();
   }
 
   const backendEndpoint = '/api/chat';
@@ -1240,8 +1261,12 @@ async function sendMessage() {
     deductCredits(modelUsed === 'local-fallback' ? 'gpt-5-nano' : modelUsed, text);
 
     // Agent mode: update task status and notify
-    if (agentModeEnabled && agentTasks.length > 0) {
-      agentTasks[0].status = 'success';
+    if (activeTask) {
+      activeTask.status = 'success';
+      activeTask.updatedAt = new Date().toISOString();
+      activeTask.result = { modelUsed, fallbackUsed: wasFallback };
+      renderTasksList();
+      saveTasksToDB();
       addNotification('Task Completed', `"${text.substring(0, 40)}..." finished successfully.`, 'success');
     }
 
@@ -1249,8 +1274,12 @@ async function sendMessage() {
     removeThinkingIndicator();
     consecutiveAPIFailures++;
     renderErrorMessage('generic', error.message);
-    if (agentModeEnabled && agentTasks.length > 0) {
-      agentTasks[0].status = 'failed';
+    if (activeTask) {
+      activeTask.status = 'failed';
+      activeTask.updatedAt = new Date().toISOString();
+      activeTask.error = error.message;
+      renderTasksList();
+      saveTasksToDB();
       addNotification('Task Failed', `"${text.substring(0, 40)}..." encountered an error.`, 'error');
     }
     if (consecutiveAPIFailures >= MAX_API_FAILURES_BEFORE_WARNING) document.getElementById('api-error-overlay').classList.remove('hidden');

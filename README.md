@@ -6,10 +6,13 @@ An autonomous AI agent that evolves from chat assistant to task execution engine
 - **App**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai
 - **Documentation**: https://3000-iigb1ekl5c706e88310af-ea026bf9.sandbox.novita.ai/docs
 
-## Phase 4: Agentic Execution System (Current)
+## Phase 5: Production & Deployment (In Progress)
 
-### What's New
-Phase 4 transforms the chat-based assistant into an **Agentic Execution System** with:
+### Current Focus
+Phase 5 hardens the Phase 4 execution system for production with stricter deployment configuration, persistent task execution storage, and environment-driven readiness checks.
+
+### Phase 4 Delivered
+Phase 4 transformed the chat-based assistant into an **Agentic Execution System** with:
 
 1. **Agentic Planning (L4)** - Task decomposition engine, real-time "Thinking Process" UI panel, Agent Mode toggle for deep execution tasks
 2. **Multimodal Output Rendering (L5)** - Slides Generator (Markdown-to-slide with 16:9 preview), Web Designer (HTML preview with sandbox iframe + device toggle)
@@ -74,6 +77,9 @@ The `/docs` route provides comprehensive documentation including:
 | POST | `/api/db/credits` | Update credits (backward compat) |
 | POST | `/api/db/settings` | Save user settings |
 | GET | `/api/db/settings/:userId` | Load user settings |
+| POST | `/api/db/tasks` | Persist agent task executions |
+| GET | `/api/db/tasks/:userId` | Load persisted task executions |
+| DELETE | `/api/db/tasks/:taskId` | Delete a task execution |
 
 ## Data Architecture
 
@@ -84,6 +90,7 @@ profiles           - User credits, settings, plan
 conversations      - Chat sessions (user_id FK)
 messages           - Individual messages (conversation_id FK, CASCADE DELETE)
 usage_history      - Credit usage tracking (user_id FK)
+task_executions    - Persistent agent tasks (user_id FK, JSONB steps/result)
 ```
 
 ### Credit Cost Matrix
@@ -122,7 +129,8 @@ webapp/
 │   │                            # Agent effects, multimodal styles, responsive
 │   └── docs.js                # Interactive documentation system
 ├── supabase/
-│   └── schema.sql             # Database schema
+│   └── schema.sql             # Database schema + task_executions + triggers
+├── .dev.vars.example          # Safe local environment template
 ├── .dev.vars                  # Local environment variables
 ├── ecosystem.config.cjs       # PM2 configuration
 ├── wrangler.jsonc             # Cloudflare configuration
@@ -133,6 +141,10 @@ webapp/
 ## Environment Variables
 
 ```bash
+# Runtime mode / CORS
+APP_ENV=development
+ALLOWED_ORIGIN=http://127.0.0.1:3000
+
 # Required for AI
 OPENAI_API_KEY=your-key
 OPENAI_BASE_URL=https://api.openai.com/v1
@@ -182,15 +194,24 @@ npm run dev:sandbox
 npm run build
 npx wrangler pages deploy dist --project-name general-boss
 
+# Set production variables
+# APP_ENV=production
+# ALLOWED_ORIGIN=https://your-domain.example
+
 # Set production secrets
 npx wrangler pages secret put OPENAI_API_KEY --project-name general-boss
 npx wrangler pages secret put SUPABASE_URL --project-name general-boss
 npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name general-boss
+npx wrangler pages secret put STRIPE_SECRET_KEY --project-name general-boss
+npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name general-boss
+npx wrangler pages secret put LEMONSQUEEZY_API_KEY --project-name general-boss
+npx wrangler pages secret put LEMONSQUEEZY_WEBHOOK_SECRET --project-name general-boss
 ```
 
 ## What's Next (Pending)
 
-- [ ] Supabase `task_executions` table for persistent task tracking across sessions
+- [x] Supabase `task_executions` table and API routes for persistent task tracking across sessions
+- [ ] Frontend task replay/history polish for persisted executions
 - [ ] Background execution that survives browser close (server-side task queue)
 - [ ] File-to-Web transform (upload file -> interactive landing page)
 - [ ] Real Supabase credentials and Row Level Security
@@ -201,5 +222,5 @@ npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name general-boss
 
 ## Status
 - **Platform**: Cloudflare Pages (dev sandbox)
-- **Phase**: 4 - Agentic Execution System
-- **Last Updated**: 2026-03-30
+- **Phase**: 5 - Production & Deployment (in progress)
+- **Last Updated**: 2026-04-01

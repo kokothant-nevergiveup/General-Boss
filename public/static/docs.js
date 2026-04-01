@@ -1,6 +1,6 @@
 // ============================================================
-// Autonomous Agentic System - Interactive Documentation
-// Phase 4: Agentic Execution System
+// General Boss - Interactive Documentation
+// Phase 5: Production & Deployment Hardening
 // ============================================================
 
 // --- Navigation ---
@@ -66,8 +66,8 @@ function renderOverview() {
         Autonomous Agentic System
       </h1>
       <p class="text-gray-400 text-lg">Layer Architecture, Reports & Implementation Plans</p>
-      <div class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-xs text-purple-300">
-        <i class="fas fa-bolt"></i> Phase 4: Agentic Execution System - Active
+      <div class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-xs text-amber-300">
+        <i class="fas fa-rocket"></i> Phase 5: Production & Deployment - In Progress
       </div>
     </div>
     
@@ -178,6 +178,12 @@ function renderOverview() {
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Settings modal with Tasks tab for agent task tracking</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Dark-mode aesthetic with agent glow effects & mobile responsiveness</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Documentation updated to reflect Phase 4 architecture</span></div>
+
+        <div class="text-xs font-bold text-amber-400 uppercase mt-4 mb-2">Phase 5 (Production & Deployment)</div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Persistent task_executions schema, indexes, and update triggers added</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Task execution API routes added for save/load/delete flows</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Health endpoint now reports production readiness and missing required secrets</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Deployment templates updated with APP_ENV and ALLOWED_ORIGIN guidance</span></div>
         
         <div class="text-xs font-bold text-amber-400 uppercase mt-4 mb-2">In Progress</div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-gray-400">Supabase URL placeholder - needs real credentials</span></div>
@@ -189,7 +195,7 @@ function renderOverview() {
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-gray-500">Stripe/LemonSqueezy production keys</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-gray-500">Row Level Security (RLS) policies</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-gray-500">Cloudflare Pages production deployment</span></div>
-        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-gray-500">Supabase task_executions table for async persistence</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-gray-500">Production deployment to Cloudflare Pages with live secrets</span></div>
       </div>
     </div>`;
 }
@@ -397,9 +403,9 @@ function renderPhase4() {
         ${reportItem('Notification Component', 'completed',
           'Bell icon with unread count badge. Slide-out notification panel with categorized alerts (info/success/warning/error). Auto-marks as read on panel open. Clear all button.',
           'public/static/app.js - notifications[], toggleNotifications(), renderNotifications()')}
-        ${reportItem('Supabase Task Persistence', 'pending',
-          'Need task_executions table in Supabase to persist agent task states across browser sessions. Current implementation is in-memory only - tasks lost on page refresh.',
-          'Requires: supabase/schema.sql update + new API endpoints')}
+        ${reportItem('Supabase Task Persistence', 'completed',
+          'task_executions schema, indexes, update triggers, and /api/db/tasks endpoints now persist agent task states across sessions. Frontend sync loads tasks during initialization and saves state updates after execution.',
+          'supabase/schema.sql, src/index.tsx, public/static/app.js')}
         ${reportItem('Background Execution', 'pending',
           'Long-running tasks should survive browser close via server-side execution tracking. Requires Supabase webhook or polling mechanism to update task state.',
           'Requires: Server-side task queue + Supabase real-time subscriptions')}
@@ -622,7 +628,7 @@ function renderLayer2() {
       { step: 3, title: 'CRUD Endpoints', status: 'done', desc: 'All /api/db/* routes.' },
       { step: 4, title: 'Frontend Integration', status: 'done', desc: 'Load on init, save on mutation.' },
       { step: 5, title: 'Task State Tracking (Phase 4)', status: 'done', desc: 'In-memory agentTasks with UI rendering.' },
-      { step: 6, title: 'Task Persistence to Supabase', status: 'pending', desc: 'task_executions table + API endpoints.' },
+      { step: 6, title: 'Task Persistence to Supabase', status: 'done', desc: 'task_executions table + API endpoints + frontend sync.' },
       { step: 7, title: 'Real Credentials', status: 'pending', desc: 'Create Supabase project, run schema.' },
       { step: 8, title: 'Enable RLS', status: 'pending', desc: 'Row Level Security policies.' }
     ])}`;
@@ -1085,7 +1091,7 @@ function renderImplementation() {
         ${phaseStep('4.8', 'Tasks Tab in Settings', 'done', 'Agent task tracking with status badges.')}
         ${phaseStep('4.9', 'Documentation Update', 'done', 'Phase 4 details added to /docs.')}
         ${phaseStep('4.10', 'File-to-Web Transform', 'in-progress', 'Full file content reading + HTML generation.')}
-        ${phaseStep('4.11', 'Supabase Task Persistence', 'pending', 'task_executions table for cross-session persistence.')}
+        ${phaseStep('4.11', 'Supabase Task Persistence', 'done', 'task_executions table, API routes, and frontend sync for cross-session persistence.')}
         ${phaseStep('4.12', 'Background Execution', 'pending', 'Server-side task queue for browser-close resilience.')}
       </div>
     </div>
@@ -1093,7 +1099,7 @@ function renderImplementation() {
     <div class="doc-card p-6 bg-[#141414] border border-[#2a2a2a] rounded-2xl mb-6">
       <h3 class="text-sm font-semibold mb-4 flex items-center gap-2">
         <i class="fas fa-flag-checkered text-red-400"></i>
-        Phase 5: Production Hardening (Next)
+        Phase 5: Production Hardening (Active)
       </h3>
       <div class="space-y-3">
         ${phaseStep('5.1', 'Real Supabase Credentials', 'pending', 'Create project, run schema, replace placeholders.')}
@@ -1217,7 +1223,7 @@ function renderStatus() {
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Mobile responsiveness</span></div>
         <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Documentation updated (this page)</span></div>
         <div class="flex items-center gap-2 p-2 bg-amber-500/5 rounded-lg"><i class="fas fa-spinner fa-spin text-amber-400 text-sm"></i><span class="text-xs">File-to-Web transform</span></div>
-        <div class="flex items-center gap-2 p-2 bg-[#1a1a1a] rounded-lg"><i class="fas fa-circle text-gray-600 text-sm"></i><span class="text-xs text-gray-500">Supabase task persistence</span></div>
+        <div class="flex items-center gap-2 p-2 bg-green-500/5 rounded-lg"><i class="fas fa-circle-check text-green-400 text-sm"></i><span class="text-xs">Supabase task persistence</span></div>
         <div class="flex items-center gap-2 p-2 bg-[#1a1a1a] rounded-lg"><i class="fas fa-circle text-gray-600 text-sm"></i><span class="text-xs text-gray-500">Background execution</span></div>
       </div>
     </div>`;
