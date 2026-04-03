@@ -184,6 +184,7 @@ function renderOverview() {
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Task execution API routes added for save/load/delete flows</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Health endpoint now reports production readiness and missing required secrets</span></div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">Deployment templates updated with APP_ENV and ALLOWED_ORIGIN guidance</span></div>
+        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-gray-300">GitHub Actions workflow template added for Cloudflare Pages direct upload</span></div>
         
         <div class="text-xs font-bold text-amber-400 uppercase mt-4 mb-2">In Progress</div>
         <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-gray-400">Supabase URL placeholder - needs real credentials</span></div>
@@ -927,7 +928,7 @@ function renderLayer6() {
         ${reportItem('Vite Build System', 'completed', '@hono/vite-build outputs _worker.js + static assets.', 'vite.config.ts')}
         ${reportItem('Wrangler Configuration', 'completed', 'wrangler.jsonc with nodejs_compat flag.', 'wrangler.jsonc')}
         ${reportItem('PM2 Process Manager', 'completed', 'ecosystem.config.cjs on port 3000.', 'ecosystem.config.cjs')}
-        ${reportItem('Cloudflare Pages Deploy', 'pending', 'Needs CLOUDFLARE_API_TOKEN.', 'package.json deploy script')}
+        ${reportItem('Cloudflare Pages Deploy', 'completed', 'GitHub Actions workflow + npm deploy scripts wired. Live Cloudflare credentials are still required to execute production deploys.', '.github/workflows/pages-deploy.yml')}
       </div>
     </div>
     
@@ -935,9 +936,10 @@ function renderLayer6() {
       { step: 1, title: 'Vite + Hono Setup', status: 'done', desc: 'Scaffolded for Cloudflare Pages.' },
       { step: 2, title: 'PM2 Configuration', status: 'done', desc: 'Dev server management.' },
       { step: 3, title: 'Build Pipeline', status: 'done', desc: 'npm run build -> dist/.' },
-      { step: 4, title: 'Cloudflare API Key', status: 'pending', desc: 'Set up CLOUDFLARE_API_TOKEN.' },
-      { step: 5, title: 'Production Deploy', status: 'pending', desc: 'Create Pages project.' },
-      { step: 6, title: 'Secret Configuration', status: 'pending', desc: 'All env vars as secrets.' }
+      { step: 4, title: 'GitHub Actions Workflow', status: 'done', desc: 'pages-deploy.yml builds and deploys on pushes to main.' },
+      { step: 5, title: 'Cloudflare Credentials', status: 'pending', desc: 'Set up CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.' },
+      { step: 6, title: 'Secret Configuration', status: 'pending', desc: 'Set runtime env vars in Pages.' },
+      { step: 7, title: 'Production Deploy', status: 'pending', desc: 'Execute live Pages deployment with real secrets.' }
     ])}`;
 }
 
@@ -1106,8 +1108,9 @@ function renderImplementation() {
         ${phaseStep('5.2', 'Row Level Security', 'pending', 'Enable RLS policies for data isolation.')}
         ${phaseStep('5.3', 'Webhook Signatures', 'pending', 'Verify Stripe/LS webhooks.')}
         ${phaseStep('5.4', 'Server-side Credit Check', 'pending', 'Verify from DB, not client.')}
-        ${phaseStep('5.5', 'Cloudflare Deploy', 'pending', 'Production deployment with secrets.')}
-        ${phaseStep('5.6', 'Custom Domain', 'pending', 'Configure domain + SSL.')}
+        ${phaseStep('5.5', 'Deployment Workflow Wiring', 'done', 'Manual Wrangler scripts + GitHub Actions template added for Cloudflare Pages.')}
+        ${phaseStep('5.6', 'Cloudflare Deploy', 'pending', 'Production deployment with live secrets.')}
+        ${phaseStep('5.7', 'Custom Domain', 'pending', 'Configure domain + SSL.')}
       </div>
     </div>`;
 }

@@ -6,6 +6,11 @@
     "build": "vite build",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name general-boss --branch main",
+    "deploy:preview": "npm run build && wrangler pages deploy dist --project-name general-boss --branch preview",
+    "deploy:list": "wrangler pages deployment list --project-name general-boss",
+    "deploy:tail": "wrangler pages deployment tail --project-name general-boss --environment production",
+    "project:create": "wrangler pages project create general-boss --production-branch main",
     "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000"
   },
   "dependencies": {

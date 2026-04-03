@@ -189,23 +189,80 @@ npm run dev:sandbox
 
 ## Deployment
 
-```bash
-# Production deployment to Cloudflare Pages
-npm run build
-npx wrangler pages deploy dist --project-name general-boss
+### 1) Create or verify the Cloudflare Pages project
 
-# Set production variables
+```bash
+npm run project:create
+# or, if the project already exists:
+npx wrangler pages project list
+```
+
+### 2) Manual production deploy
+
+```bash
+npm run deploy:prod
+```
+
+### 3) Manual preview deploy
+
+```bash
+npm run deploy:preview
+```
+
+### 4) Required runtime variables
+
+Set these in the Cloudflare Pages dashboard as variables/secrets, or upload them with Wrangler:
+
+```bash
+# Non-secret runtime configuration
 # APP_ENV=production
 # ALLOWED_ORIGIN=https://your-domain.example
 
-# Set production secrets
+# Required secrets
 npx wrangler pages secret put OPENAI_API_KEY --project-name general-boss
 npx wrangler pages secret put SUPABASE_URL --project-name general-boss
 npx wrangler pages secret put SUPABASE_SERVICE_KEY --project-name general-boss
+
+# Optional payment secrets
 npx wrangler pages secret put STRIPE_SECRET_KEY --project-name general-boss
 npx wrangler pages secret put STRIPE_WEBHOOK_SECRET --project-name general-boss
+npx wrangler pages secret put STRIPE_PRICE_STARTER --project-name general-boss
+npx wrangler pages secret put STRIPE_PRICE_PRO --project-name general-boss
 npx wrangler pages secret put LEMONSQUEEZY_API_KEY --project-name general-boss
 npx wrangler pages secret put LEMONSQUEEZY_WEBHOOK_SECRET --project-name general-boss
+npx wrangler pages secret put LEMONSQUEEZY_STORE_ID --project-name general-boss
+```
+
+> Tip: for local parity, copy `.dev.vars.example` to `.dev.vars`. Cloudflare supports `.dev.vars` for local secrets and `wrangler pages secret put` / `secret bulk` for Pages project secrets.
+
+### 5) GitHub Actions deployment wiring
+
+A workflow template is included at `.github/workflows/pages-deploy.yml`.
+
+Create these **GitHub repository secrets** before enabling CI deploys:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+The workflow builds on pushes to `main`, then deploys `dist/` to the `general-boss` Pages project.
+
+### 6) Deployment observability
+
+```bash
+npm run deploy:list
+npm run deploy:tail
+```
+
+### 7) Production readiness check
+
+After deployment, verify:
+
+- `GET /api/health` returns `productionReady: true`
+- `missingRequired` is empty
+- `warnings` is empty or intentionally accepted
+- `/api/chat` streams correctly with the configured AI provider
+- Supabase-backed `/api/db/*` routes respond without fallback mode
+- Payment webhooks are configured before enabling paid plans
 ```
 
 ## What's Next (Pending)
